@@ -11,7 +11,7 @@ from clarifai_python_sdk.constants import API_BASE_URL
 from clarifai_python_sdk.endpoints import ENDPOINTS
 
 
-class ClarifaiApp:
+class ClarifaiApi:
     def __init__(
         self,
         token: str,
