@@ -9,7 +9,7 @@ class Models:
 
     def predict(
         self, 
-        image_src,
+        input_src: str,
         model_id: str, 
         model_version_id: str = None
         ):
@@ -26,7 +26,7 @@ class Models:
                 {
                     'data': {
                         'image': {
-                            'url': image_src
+                            'url': input_src
                         }
                     }
                 }
