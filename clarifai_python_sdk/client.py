@@ -2,6 +2,8 @@
 from clarifai_python_sdk.modules.apps import Apps
 from clarifai_python_sdk.modules.models import Models
 from clarifai_python_sdk.modules.response import Response
+from clarifai_python_sdk.modules.inputs import Inputs
+from clarifai_python_sdk.modules.concepts import Concepts
 
 # HTTP CLIENT
 from clarifai_python_sdk.http_client import HttpClient
@@ -44,3 +46,5 @@ class ClarifaiApi:
  
         self.apps = Apps(params)
         self.models = Models(params)
+        self.inputs = Inputs(params)
+        self.concepts = Concepts(params)

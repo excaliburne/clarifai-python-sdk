@@ -23,6 +23,8 @@ class HttpClient:
         if body: 
             args['data'] = json.dumps(body)
 
+        print(self.base_url + endpoint)
+        
         r = req(self.base_url + endpoint, **args)
 
         return r.json()
