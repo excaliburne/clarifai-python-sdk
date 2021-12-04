@@ -7,7 +7,7 @@ class Concepts:
         self.params = params
     
 
-    def get_all(self):
+    def list_all(self):
         request_type = 'get'
         endpoint = self.params['endpoints']['concepts']['list'](self.params['user_data_object'])
 
