@@ -1,5 +1,9 @@
+import json
+
 from clarifai_python_sdk.client import ClarifaiApi
 from clarifai_python_sdk.modules.models import Models
+
+from clarifai_python_sdk.data import inputs
 
 def main():
     config = {
@@ -7,16 +11,16 @@ def main():
         'user_id': 'excaliburne',
         'app_id': 'clarifai-toolbox-five',
         'response_config': {
-            'pretty_print': True
+            # 'pretty_print': True,
             # 'convert_json_to_dict': True
         }
     }    
 
     clarifai = ClarifaiApi(**config)
 
-    response = clarifai.concepts.get_all()
+    response = clarifai.inputs.delete_all()
 
-    print(response)
+    print(json.dumps(response, indent=4))
 
 
 if __name__ == "__main__":

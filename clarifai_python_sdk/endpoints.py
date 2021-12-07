@@ -1,3 +1,4 @@
+
 def build_advanced_url(*args):
     return ''.join(args)
 
@@ -13,11 +14,12 @@ ENDPOINTS = {
 
     'inputs': {
         'post': '/v2/inputs',
-        'get': lambda user_data_object: '/v2/users/' + user_data_object['user_id'] + '/apps/' + user_data_object['app_id'] + '/inputs'
+        'get': lambda user_data_object: '/v2/users/me/apps/' + user_data_object['app_id'] + '/inputs',
+        'stream': lambda app_id: '/v2/users/me/apps/' + app_id + '/inputs/stream'
     },
 
     'concepts': {
-        'list': lambda user_data_object: build_advanced_url('/v2/users/', user_data_object['user_id'], '/apps/', user_data_object['app_id'], '/concepts?page=1&per_page=500')
+        'list': lambda user_data_object: build_advanced_url('/v2/users/me/apps/', user_data_object['app_id'], '/concepts?page=1&per_page=500')
     }
     
 }

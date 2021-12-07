@@ -1,10 +1,15 @@
 # SYSTEM IMPORTS
 import json
+from operator import itemgetter
+
+# 
+from clarifai_python_sdk import endpoints
 
 # UTILS
 from clarifai_python_sdk.utils.dicts import (
     get_dict_by_key_or_return_empty, get_existing_dicts_from_keys
 )
+from clarifai_python_sdk.utils.filters import Filters
 
 
 class Inputs:
@@ -28,8 +33,19 @@ class Inputs:
         
         return struct
 
+    
+    def _make_input_object(self, input):
+        data = {
+            'data': {
+                **get_existing_dicts_from_keys(input, ['image', 'video']), # should only find either in this case
+                **get_dict_by_key_or_return_empty(input, 'metadata'),
+                **get_dict_by_key_or_return_empty(input, 'concepts')
+            }
+        }
+        return data
 
-    def add(self, inputs: list):
+
+    def add(self, inputs: list) -> dict:
         """Add inputs to Clarifai App
 
         Args:
@@ -40,32 +56,157 @@ class Inputs:
         """
 
         fail_to_upload_counter = 0  
-        list_of_responses = []
         method = 'post'
         endpoint = self.params['endpoints']['inputs']['post']
 
-        for input in inputs:
-            body = { 
-                'user_app_id': self.params['user_data_object'],
-                'inputs': [
-                    {
-                        'data': {
-                            **get_existing_dicts_from_keys(input, ['image', 'video']), # should only find either in this case
-                            **get_dict_by_key_or_return_empty(input, 'metadata'),
-                            **get_dict_by_key_or_return_empty(input, 'concepts')
-                        }
-                    }
-                ],
-            }
+        body = { 
+            'user_app_id': self.params['user_data_object'],
+            'inputs': [self._make_input_object(input) for input in inputs],
+        }
 
-            response = self.params['http_client'].make_request(
-                method=method,
-                endpoint=endpoint,
-                body=body
-            )
-            list_of_responses.append(response)
+        response = self.params['http_client'].make_request(
+            method=method,
+            endpoint=endpoint,
+            body=body
+        )
 
         return self.params['response_object'].returns({
-            'responses': list_of_responses,
-            'fail_to_upload_counter': fail_to_upload_counter
+            'response': response,
+            # 'fail_to_upload_counter': fail_to_upload_counter
         })
+    
+    
+    def stream(
+        self,
+        per_page: int = 30,
+        last_id: int = None
+        ) -> dict:
+        """Streaming (paginating) inputs in given Clarifai app
+
+        Args:
+            per_page (int, optional): Defaults to 30.
+            last_id (int, optional): Defaults to None.
+
+        Returns:
+            (dict)
+        """
+        method = 'get'
+        app_id = itemgetter('app_id')(self.params)
+        endpoint = self.params['endpoints']['inputs']['stream'](app_id) + f'?per_page={per_page}'
+        inputs = []
+
+        if last_id:
+            endpoint = endpoint + f'&last_id={last_id}'
+
+        response = self.params['http_client'].make_request(
+            method=method,
+            endpoint=endpoint
+        )
+
+        inputs = response['inputs']
+
+        if response['status']['code'] == 10000 and len(inputs) > 0:
+            last_id = inputs[-1]['id']
+
+        return self.params['response_object'].returns({
+            'inputs': inputs,
+            'last_id': last_id
+        })
+
+
+    def list_all(self) -> dict:
+        """Lists all inputs objects in app
+
+        - Not recommended for large apps as output would be potentially too big
+
+        Returns:
+            (dict): { 'inputs', 'inputs_number' }
+        """
+        per_page = 10    
+        last_batch_count_sould_be = per_page
+        inputs = []
+        last_batch = []
+
+        def request_new_batch(**kwargs):
+            nonlocal last_batch
+
+            stream_inputs_response = self.stream(per_page=per_page, **kwargs)
+            last_batch = stream_inputs_response['inputs']
+            inputs.extend(last_batch)
+
+        request_new_batch()
+
+        while len(last_batch) == last_batch_count_sould_be:        
+            last_id = last_batch[-1]['id']
+            last_batch.clear()
+
+            # Provide last_id to get the next set of inputs.
+            request_new_batch(last_id=last_id)
+
+        return self.params['response_object'].returns({
+            'inputs': inputs,
+            'inputs_number': len(inputs)
+        })
+
+    
+    def delete_by_ids(
+        self,
+        inputs_ids: list
+        ) -> dict:
+        """Delete a list of inputs by input_ids
+
+        Args:
+            inputs_ids (list)
+
+        Returns:
+            (dict)
+        """
+        method = 'delete'
+        endpoint = self.params['endpoints']['inputs']['post']
+        
+        body = { 
+            'user_app_id': self.params['user_data_object'],
+            'ids': inputs_ids
+        }
+
+        response = self.params['http_client'].make_request(
+            method=method,
+            endpoint=endpoint,
+            body=body
+        )
+
+        return self.params['response_object'].returns(response)
+
+
+    def delete_all(self) -> dict:
+        """Deletes all app inputs by streaming
+
+        Returns:
+            (dict): { 'number_of_deleted_inputs' }
+        """
+        per_page = 50
+        last_batch_count_sould_be = per_page
+        last_batch = []
+        number_of_deleted_inputs = 0
+
+        def request_new_batch(**kwargs):
+            nonlocal number_of_deleted_inputs, last_batch
+
+            stream_inputs_response = self.stream(per_page=per_page, **kwargs)
+            last_batch = stream_inputs_response['inputs']
+
+            self.delete_by_ids(Filters(last_batch).ids_from_input_objects())
+            number_of_deleted_inputs = number_of_deleted_inputs + len(last_batch) 
+
+        request_new_batch()
+
+        while len(last_batch) == last_batch_count_sould_be:        
+            last_id = last_batch[-1]['id']
+            last_batch.clear()
+
+            request_new_batch(last_id=last_id)
+        
+        return self.params['response_object'].returns({
+            'number_of_deleted_inputs': number_of_deleted_inputs,
+        })
+
