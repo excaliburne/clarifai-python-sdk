@@ -76,9 +76,11 @@ class Inputs:
         method = 'post'
         endpoint = self.params['endpoints']['inputs']['post']
 
+        print(1, inputs)
+
         body = { 
             'user_app_id': self.params['user_data_object'],
-            'inputs': [self._make_input_object(input) for input in inputs],
+            'inputs': inputs
         }
 
         response = self.params['http_client'].make_request(

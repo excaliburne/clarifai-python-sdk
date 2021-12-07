@@ -18,7 +18,7 @@ def main():
 
     clarifai = ClarifaiApi(**config)
 
-    response = clarifai.inputs.delete_all()
+    response = clarifai.inputs.add(inputs=inputs.ADD)
 
     print(json.dumps(response, indent=4))
 

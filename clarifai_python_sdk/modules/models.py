@@ -13,6 +13,16 @@ class Models:
         model_id: str, 
         model_version_id: str = None
         ):
+        """Predict
+
+        Args:
+            input_src (str): [description]
+            model_id (str): [description]
+            model_version_id (str, optional): [description]. Defaults to None.
+
+        Returns:
+            [type]: [description]
+        """
         model_data = {
             'model_id': model_id,
             'model_version_id': model_version_id
