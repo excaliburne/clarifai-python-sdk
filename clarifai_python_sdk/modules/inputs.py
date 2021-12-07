@@ -34,7 +34,24 @@ class Inputs:
         return struct
 
     
-    def _make_input_object(self, input):
+    def _make_input_object(self, input: dict) -> dict:
+        """Generate input format dict
+
+        {
+            'data': {
+                'image': {
+                    'concepts': ...
+                    'metadata': ...
+                }
+            }
+        }
+
+        Args:
+            input (dict)
+
+        Returns:
+            (dict)
+        """
         data = {
             'data': {
                 **get_existing_dicts_from_keys(input, ['image', 'video']), # should only find either in this case
@@ -194,7 +211,6 @@ class Inputs:
 
             stream_inputs_response = self.stream(per_page=per_page, **kwargs)
             last_batch = stream_inputs_response['inputs']
-
             self.delete_by_ids(Filters(last_batch).ids_from_input_objects())
             number_of_deleted_inputs = number_of_deleted_inputs + len(last_batch) 
 
