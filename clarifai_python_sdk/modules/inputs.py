@@ -10,6 +10,7 @@ from clarifai_python_sdk.utils.dicts import (
     get_dict_by_key_or_return_empty, get_existing_dicts_from_keys
 )
 from clarifai_python_sdk.utils.filters import Filters
+from clarifai_python_sdk.utils.urls import Urls
 
 
 class Inputs:
@@ -33,36 +34,12 @@ class Inputs:
         
         return struct
 
-    
-    def _make_input_object(self, input: dict) -> dict:
-        """Generate input format dict
 
-        {
-            'data': {
-                'image': {
-                    'concepts': ...
-                    'metadata': ...
-                }
-            }
-        }
-
-        Args:
-            input (dict)
-
-        Returns:
-            (dict)
-        """
-        data = {
-            'data': {
-                **get_existing_dicts_from_keys(input, ['image', 'video']), # should only find either in this case
-                **get_dict_by_key_or_return_empty(input, 'metadata'),
-                **get_dict_by_key_or_return_empty(input, 'concepts')
-            }
-        }
-        return data
-
-
-    def add(self, inputs: list) -> dict:
+    def add(
+        self, 
+        inputs: list,
+        convert_src: str = None
+        ) -> dict:
         """Add inputs to Clarifai App
 
         Args:
@@ -76,7 +53,11 @@ class Inputs:
         method = 'post'
         endpoint = self.params['endpoints']['inputs']['post']
 
-        print(1, inputs)
+        conversion_map = {
+            'convert_url_to_base_64': lambda: [Urls().input_object_to_base64(input) for input in inputs]
+        }
+
+        if convert_src: inputs = conversion_map[convert_src]()
 
         body = { 
             'user_app_id': self.params['user_data_object'],

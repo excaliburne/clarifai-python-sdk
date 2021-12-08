@@ -18,9 +18,9 @@ def main():
 
     clarifai = ClarifaiApi(**config)
 
-    response = clarifai.inputs.add(inputs=inputs.ADD)
+    response = clarifai.inputs.add(inputs=inputs.ADD, convert_src='convert_url_to_base_64')
 
-    print(json.dumps(response, indent=4))
+    print(response)
 
 
 if __name__ == "__main__":

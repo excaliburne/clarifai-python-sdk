@@ -136,3 +136,4 @@ dmypy.json
 cython_debug/
 
 main_private.py
+output.txt

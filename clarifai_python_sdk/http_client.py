@@ -21,9 +21,8 @@ class HttpClient:
             args['headers'] = {**args['headers'], 'Content-Type': 'application/json'}
 
         if body: 
+            print(body)
             args['data'] = json.dumps(body)
-
-        print(self.base_url + endpoint)
         
         r = req(self.base_url + endpoint, **args)
 
