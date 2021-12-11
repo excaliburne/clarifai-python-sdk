@@ -38,10 +38,10 @@ class ClarifaiApi:
             # **kwargs
         }
 
-        if user_id and app_id:
+        if self.user_id and self.app_id:
             params['user_data_object'] = {
-                "user_id": self.user_id,
-                "app_id": self.app_id
+                'user_id': self.user_id,
+                'app_id': self.app_id
             }
  
         self.apps = Apps(params)
