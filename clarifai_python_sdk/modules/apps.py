@@ -1,3 +1,4 @@
+from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 class Apps:
     def __init__(
@@ -15,7 +16,7 @@ class Apps:
         """
         user_id = self.params['user_id']
         request_type = 'get'
-        endpoint = self.params['endpoints']['apps']['list'](user_id)
+        endpoint = UrlHandler().build('apps', {'user_id': user_id})
 
         response = self.params['http_client'].make_request(
             method=request_type,

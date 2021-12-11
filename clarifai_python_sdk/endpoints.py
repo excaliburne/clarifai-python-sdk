@@ -1,25 +1,12 @@
-
-def build_advanced_url(*args):
-    return ''.join(args)
-
-
 ENDPOINTS = {
-    'apps': {
-        'list': lambda user_id: f'/v2/users/{user_id}/apps'
-    },
+    'apps':                               '/v2/users/{user_id}/apps',
 
-    'models': {
-        'predict': lambda model: model['model_version_id'] and '/v2/models/' + model['model_id'] + '/versions/{version_id}/outputs' or '/v2/models/' + model['model_id'] + '/outputs'
-    },
+    'models__predict':                    '/v2/models/{model_id}/versions/{model_version_id}/outputs',
+    'models__predict_without_version_id': '/v2/models/{model_id}/outputs',
 
-    'inputs': {
-        'post': '/v2/inputs',
-        'get': lambda user_data_object: '/v2/users/me/apps/' + user_data_object['app_id'] + '/inputs',
-        'stream': lambda app_id: '/v2/users/me/apps/' + app_id + '/inputs/stream'
-    },
+    'inputs__post':                       '/v2/inputs',
+    'inputs__get':                        '/v2/users/{user_id}/apps/{app_id}/inputs',
+    'inputs__stream':                     '/v2/users/me/apps/{app_id}/inputs/stream',
 
-    'concepts': {
-        'list': lambda user_data_object: build_advanced_url('/v2/users/me/apps/', user_data_object['app_id'], '/concepts?page=1&per_page=500')
-    }
-    
+    'concepts__list':                     '/v2/users/me/apps/{app_id}/concepts?page={page}&per_page={per_page}'
 }

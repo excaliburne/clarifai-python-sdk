@@ -2,7 +2,7 @@
 import json
 from operator import itemgetter
 
-# 
+# ROOT
 from clarifai_python_sdk import endpoints
 
 # UTILS
@@ -11,6 +11,7 @@ from clarifai_python_sdk.utils.dicts import (
 )
 from clarifai_python_sdk.utils.filters import Filters
 from clarifai_python_sdk.utils.urls import Urls
+from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
 class Inputs:
@@ -51,7 +52,7 @@ class Inputs:
 
         fail_to_upload_counter = 0  
         method = 'post'
-        endpoint = self.params['endpoints']['inputs']['post']
+        endpoint = UrlHandler().build('inputs__post')
 
         conversion_map = {
             'convert_url_to_base_64': lambda: [Urls().input_object_to_base64(input) for input in inputs]
@@ -92,7 +93,7 @@ class Inputs:
         """
         method = 'get'
         app_id = itemgetter('app_id')(self.params)
-        endpoint = self.params['endpoints']['inputs']['stream'](app_id) + f'?per_page={per_page}'
+        endpoint = UrlHandler().build('inputs__stream', { 'app_id': app_id }) + f'?per_page={per_page}'
         inputs = []
 
         if last_id:
@@ -162,7 +163,7 @@ class Inputs:
             (dict)
         """
         method = 'delete'
-        endpoint = self.params['endpoints']['inputs']['post']
+        endpoint = UrlHandler().build('inputs__post')
         
         body = { 
             'user_app_id': self.params['user_data_object'],

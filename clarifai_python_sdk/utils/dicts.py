@@ -32,3 +32,9 @@ def delete_keys_from_dict(d, to_delete):
         for i in d:
             delete_keys_from_dict(i, to_delete)
     return d
+
+
+def delete_none_values(dictt: dict):
+    new_dict = {key: value for (key, value) in dictt.items() if value is not None}
+
+    return new_dict

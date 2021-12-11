@@ -4,6 +4,7 @@ from clarifai_python_sdk.client import ClarifaiApi
 from clarifai_python_sdk.modules.models import Models
 
 from clarifai_python_sdk.data import inputs
+from clarifai_python_sdk.data import predict
 
 def main():
     config = {
@@ -11,14 +12,14 @@ def main():
         'user_id': 'excaliburne',
         'app_id': 'clarifai-toolbox-five',
         'response_config': {
-            # 'pretty_print': True,
+            'pretty_print': True,
             # 'convert_json_to_dict': True
         }
     }    
 
     clarifai = ClarifaiApi(**config)
 
-    response = clarifai.inputs.add(inputs=inputs.ADD, convert_src='convert_url_to_base_64')
+    response = clarifai.concepts.list_all()
 
     print(response)
 

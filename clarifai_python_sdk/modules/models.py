@@ -1,3 +1,5 @@
+# UTILS
+from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 class Models:
     def __init__(
@@ -28,7 +30,11 @@ class Models:
             'model_version_id': model_version_id
         }
         request_type = 'post'
-        endpoint = self.params['endpoints']['models']['predict'](model_data)
+
+        if None in model_data.values():
+            endpoint = UrlHandler().build('models__predict_without_version_id', model_data)
+        else:
+            endpoint = UrlHandler().build('models__predict', model_data)
 
         body = { 
             'user_app_id': self.params['user_data_object'],
