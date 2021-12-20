@@ -30,6 +30,6 @@ class UrlHandler:
 
         if (data):
             data = delete_none_values(data)
-            url = getattr(url, 'format')(**data)
+            url  = getattr(url, 'format')(**data)
 
         return url

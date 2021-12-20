@@ -50,8 +50,7 @@ class Inputs:
             (dict)
         """
 
-        fail_to_upload_counter = 0  
-        method = 'post'
+        method   = 'post'
         endpoint = UrlHandler().build('inputs__post')
 
         conversion_map = {
@@ -91,10 +90,10 @@ class Inputs:
         Returns:
             (dict)
         """
-        method = 'get'
-        app_id = itemgetter('app_id')(self.params)
+        method   = 'get'
+        app_id   = itemgetter('app_id')(self.params)
         endpoint = UrlHandler().build('inputs__stream', { 'app_id': app_id }) + f'?per_page={per_page}'
-        inputs = []
+        inputs   = []
 
         if last_id:
             endpoint = endpoint + f'&last_id={last_id}'
@@ -123,16 +122,16 @@ class Inputs:
         Returns:
             (dict): { 'inputs', 'inputs_number' }
         """
-        per_page = 10    
+        per_page                  = 10    
         last_batch_count_sould_be = per_page
-        inputs = []
-        last_batch = []
+        inputs                    = []
+        last_batch                = []
 
         def request_new_batch(**kwargs):
             nonlocal last_batch
 
             stream_inputs_response = self.stream(per_page=per_page, **kwargs)
-            last_batch = stream_inputs_response['inputs']
+            last_batch             = stream_inputs_response['inputs']
             inputs.extend(last_batch)
 
         request_new_batch()
@@ -162,7 +161,7 @@ class Inputs:
         Returns:
             (dict)
         """
-        method = 'delete'
+        method   = 'delete'
         endpoint = UrlHandler().build('inputs__post')
         
         body = { 
@@ -185,16 +184,16 @@ class Inputs:
         Returns:
             (dict): { 'number_of_deleted_inputs' }
         """
-        per_page = 50
+        per_page                  = 50
         last_batch_count_sould_be = per_page
-        last_batch = []
-        number_of_deleted_inputs = 0
+        last_batch                = []
+        number_of_deleted_inputs  = 0
 
         def request_new_batch(**kwargs):
             nonlocal number_of_deleted_inputs, last_batch
 
             stream_inputs_response = self.stream(per_page=per_page, **kwargs)
-            last_batch = stream_inputs_response['inputs']
+            last_batch             = stream_inputs_response['inputs']
             self.delete_by_ids(Filters(last_batch).ids_from_input_objects())
             number_of_deleted_inputs = number_of_deleted_inputs + len(last_batch) 
 

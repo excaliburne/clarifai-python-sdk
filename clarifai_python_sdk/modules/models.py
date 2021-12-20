@@ -15,26 +15,28 @@ class Models:
         model_id: str, 
         model_version_id: str = None
         ):
-        """Predict
+        """
+        Predict endpoint
 
         Args:
-            input_src (str): [description]
-            model_id (str): [description]
-            model_version_id (str, optional): [description]. Defaults to None.
+            input_src (str)
+            model_id (str)
+            model_version_id (str, optional):  Defaults to None.
 
         Returns:
-            [type]: [description]
+            (dict): Response dict
         """
+
         model_data = {
             'model_id': model_id,
             'model_version_id': model_version_id
         }
         request_type = 'post'
-
-        if None in model_data.values():
-            endpoint = UrlHandler().build('models__predict_without_version_id', model_data)
-        else:
-            endpoint = UrlHandler().build('models__predict', model_data)
+            
+        endpoint = UrlHandler().build(
+            'models__predict_without_version_id' if None is model_data.values else 'models__predict', 
+            model_data
+        )
 
         body = { 
             'user_app_id': self.params['user_data_object'],
