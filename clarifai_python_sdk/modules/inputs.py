@@ -72,7 +72,6 @@ class Inputs:
 
         return self.params['response_object'].returns({
             'response': response,
-            # 'fail_to_upload_counter': fail_to_upload_counter
         })
     
     
