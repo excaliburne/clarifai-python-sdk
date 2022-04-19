@@ -14,9 +14,11 @@ class Models:
         self.params = params
     
 
+    # TODO: 
+    #   - 
     def predict(
         self, 
-        input_src: dict,
+        inputs: dict,
         model_id: str, 
         model_version_id: str = None
         ):
@@ -24,7 +26,7 @@ class Models:
         Predict endpoint
 
         Args:
-            input_src (dict)
+            inputs (list)
             model_id (str)
             model_version_id (str, optional):  Defaults to None.
 
@@ -43,13 +45,11 @@ class Models:
             model_data
         )
 
+        inputs_payload = [{'data': input} for input in inputs]
+
         body = { 
             'user_app_id': self.params['user_data_object'],
-            'inputs': [
-                {
-                    'data': input_src
-                }
-            ]
+            'inputs': inputs_payload
         }
 
         response = self.params['http_client'].make_request(
