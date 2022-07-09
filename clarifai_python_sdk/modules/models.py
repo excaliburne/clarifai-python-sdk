@@ -64,6 +64,15 @@ class Models:
         self,
         model_id: str
         ):
+        """
+        Start training a model 
+
+        Args:
+            model_id (str)
+
+        Returns:
+            (Response Object)
+        """
 
         app_id   = itemgetter('app_id')(self.params)
         endpoint = UrlHandler().build('models__train', data={'model_id': model_id, 'app_id': app_id})
@@ -91,9 +100,14 @@ class Models:
         Returns:
             (Response Object)
         """
+        optional_pagination = {}
+
+        if page and per_page:
+            optional_pagination['page']     = page
+            optional_pagination['per_page'] = per_page
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, 'page': page, 'per_page': per_page}) 
+        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, **optional_pagination}) 
 
         response = self.params['http_client'].make_request(
             method="get",
