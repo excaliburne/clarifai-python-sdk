@@ -34,14 +34,15 @@ class Models:
             (dict): Response dict
         """
 
-        model_data = {
-            'model_id': model_id,
+        path_variables = {
+            'app_id'          : itemgetter('app_id')(self.params),
+            'model_id'        : model_id,
             'model_version_id': model_version_id
         }
-            
+           
         endpoint = UrlHandler().build(
-            'models__predict_without_version_id' if None in model_data.values() else 'models__predict', 
-            model_data
+            'models__predict_without_version_id' if None in path_variables.values() else 'models__predict', 
+            path_variables
         )
 
         inputs_payload = [{'data': input} for input in inputs]
