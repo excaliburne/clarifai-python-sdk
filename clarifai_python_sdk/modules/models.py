@@ -35,7 +35,6 @@ class Models:
         """
 
         path_variables = {
-            'app_id'          : itemgetter('app_id')(self.params),
             'model_id'        : model_id,
             'model_version_id': model_version_id
         }
