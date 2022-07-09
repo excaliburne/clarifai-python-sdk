@@ -2,7 +2,7 @@
 from operator import itemgetter
 
 # UTILS
-from urllib import response
+from clarifai_python_sdk.utils.urls import Urls
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
@@ -100,14 +100,9 @@ class Models:
         Returns:
             (Response Object)
         """
-        optional_pagination = {}
-
-        if page and per_page:
-            optional_pagination['page']     = page
-            optional_pagination['per_page'] = per_page
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, **optional_pagination}) 
+        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, **Urls.optional_pagination(page, per_page)}) 
 
         response = self.params['http_client'].make_request(
             method="get",
@@ -134,7 +129,7 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list_model_types', data={'app_id': app_id, 'page': page, 'per_page': per_page})
+        endpoint = UrlHandler().build('models__list_model_types', data={'app_id': app_id, **Urls.optional_pagination(page, per_page)})
 
         response = self.params['http_client'].make_request(
             method="get",
@@ -166,7 +161,12 @@ class Models:
         return self.params['response_object'].returns(response)
 
 
-    def get_model_versions_by_model_id(self, model_id: str):
+    def get_model_versions_by_model_id(
+        self, 
+        model_id: str,
+        page: str = None,
+        per_page: str = None
+        ):
         """
         Get a list of model versions given a model_id
 
@@ -178,7 +178,10 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__get_model_versions_by_model_id', data={'app_id': app_id, 'model_id': model_id})
+        endpoint = UrlHandler().build(
+            'models__get_model_versions_by_model_id', 
+            data={'app_id': app_id, 'model_id': model_id, **Urls.optional_pagination(page, per_page)}
+        )
 
         response = self.params['http_client'].make_request(
             method="get",

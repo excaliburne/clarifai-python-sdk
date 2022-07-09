@@ -1,5 +1,5 @@
 # SYSTEM IMPORTS
-import base64, requests, zlib, re 
+import base64, requests
 
 # UTILS
 from clarifai_python_sdk.utils.dicts import delete_keys_from_dict
@@ -7,6 +7,16 @@ from clarifai_python_sdk.utils.dicts import delete_keys_from_dict
 
 
 class Urls:
+
+    def optional_pagination(page: str, per_page: str) -> dict:
+        dict_to_return = {}
+
+        if page and per_page:
+            dict_to_return['page']     = page
+            dict_to_return['per_page'] = per_page
+        
+        return dict_to_return
+
 
     def image_url_to_base_64(self, image_url):
         """Converts an image_url to base64 string

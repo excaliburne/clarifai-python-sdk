@@ -29,13 +29,13 @@ class UrlHandler:
         url = ENDPOINTS[endpoint_name]
 
         if (data):
-            data = delete_none_values(data)
+            data       = delete_none_values(data)
             pagination = get_existing_dicts_from_keys(data, ['page', 'per_page'])
-            url  = getattr(url, 'format')(**data)
+            url        = getattr(url, 'format')(**data)
 
             if pagination:
-                page = pagination['page']
+                page     = pagination['page']
                 per_page = pagination['per_page']
-                url += f'?page={page}&per_page={per_page}'
+                url     += f'?page={page}&per_page={per_page}'
 
         return url
