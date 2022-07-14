@@ -2,7 +2,6 @@
 from operator import itemgetter
 
 # UTILS
-from clarifai_python_sdk.utils.urls import Urls
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
@@ -102,7 +101,7 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, **Urls.optional_pagination(page, per_page)}) 
+        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, **UrlHandler.optional_pagination(page, per_page)}) 
 
         response = self.params['http_client'].make_request(
             method="get",
@@ -129,7 +128,7 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list_model_types', data={'app_id': app_id, **Urls.optional_pagination(page, per_page)})
+        endpoint = UrlHandler().build('models__list_model_types', data={'app_id': app_id, **UrlHandler.optional_pagination(page, per_page)})
 
         response = self.params['http_client'].make_request(
             method="get",
@@ -180,7 +179,7 @@ class Models:
         app_id   = itemgetter('app_id')(self.params)
         endpoint = UrlHandler().build(
             'models__get_model_versions_by_model_id', 
-            data={'app_id': app_id, 'model_id': model_id, **Urls.optional_pagination(page, per_page)}
+            data={'app_id': app_id, 'model_id': model_id, **UrlHandler.optional_pagination(page, per_page)}
         )
 
         response = self.params['http_client'].make_request(

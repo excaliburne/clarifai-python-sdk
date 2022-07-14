@@ -11,17 +11,23 @@ class Concepts:
         self.params = params
     
 
-    def list_all(self):
-        request_type = 'get'
-        endpoint     = UrlHandler().build('concepts__list', {
+    def list(
+        self,
+        page: str,
+        per_page: str
+    ):
+        endpoint = UrlHandler().build('concepts__list', {
             'app_id': self.params['user_data_object']['app_id'],
-            'page': 1,
-            'per_page': 500
+            **UrlHandler.optional_pagination(page, per_page)
         })
 
         response = self.params['http_client'].make_request(
-            method=request_type,
+            method="get",
             endpoint=endpoint
         )
 
         return self.params['response_object'].returns(response)
+
+
+    def list_all(self):
+        pass

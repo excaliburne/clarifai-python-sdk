@@ -15,5 +15,5 @@ ENDPOINTS = {
     'inputs__get':                            '/v2/users/{user_id}/apps/{app_id}/inputs',
     'inputs__stream':                         '/v2/users/me/apps/{app_id}/inputs/stream',
 
-    'concepts__list':                         '/v2/users/me/apps/{app_id}/concepts?page={page}&per_page={per_page}'
+    'concepts__list':                         '/v2/users/me/apps/{app_id}/concepts'
 }
