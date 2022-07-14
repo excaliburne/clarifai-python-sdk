@@ -17,8 +17,8 @@ class Concepts:
 
     def list(
         self,
-        page: str = 1,
-        per_page: str = 100
+        page: int = 1,
+        per_page: int = 100
     ):
         """
         List concepts in app
@@ -56,9 +56,15 @@ class Concepts:
         last_batch         = []
 
         def get_new_batch(page, per_page):
-            get_page = self.list(page=page, per_page=per_page)
+            get_page  = self.list(page=page, per_page=per_page)
+            batch_res = []
 
-            return json.loads(get_page)['concepts'] or []
+            if (isinstance(get_page, dict)):
+                batch_res = get_page['concepts']
+            else:
+                batch_res = json.loads(get_page)['concepts']
+            
+            return batch_res
         
         first_batch = get_new_batch(current_page, batch_size)
         concepts.extend(first_batch)

@@ -163,8 +163,8 @@ class Models:
     def get_model_versions_by_model_id(
         self, 
         model_id: str,
-        page: str = None,
-        per_page: str = None
+        page: int = None,
+        per_page: int = None
         ):
         """
         Get a list of model versions given a model_id
