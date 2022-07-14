@@ -1,5 +1,9 @@
+# SYSTEM IMPORTS
+import json
+
 # UTILS
 from clarifai_python_sdk.utils.url_handler import UrlHandler
+
 
 class Concepts:
 
@@ -13,9 +17,19 @@ class Concepts:
 
     def list(
         self,
-        page: str,
-        per_page: str
+        page: str = 1,
+        per_page: str = 100
     ):
+        """
+        List concepts in app
+
+        Args:
+            page (str, optional): defaults to 1.
+            per_page (str, optional): defaults to 100.
+
+        Returns:
+            (json or dict)
+        """
         endpoint = UrlHandler().build('concepts__list', {
             'app_id': self.params['user_data_object']['app_id'],
             **UrlHandler.optional_pagination(page, per_page)
@@ -30,4 +44,37 @@ class Concepts:
 
 
     def list_all(self):
-        pass
+        """
+        List all concepts in app
+
+        Returns:
+            (json or dict)
+        """
+        batch_size         = 100
+        current_page       = 1
+        concepts           = []
+        last_batch         = []
+
+        def get_new_batch(page, per_page):
+            get_page = self.list(page=page, per_page=per_page)
+
+            return json.loads(get_page)['concepts'] or []
+        
+        first_batch = get_new_batch(current_page, batch_size)
+        concepts.extend(first_batch)
+        last_batch = first_batch
+
+        while len(last_batch) == batch_size:
+            print(current_page)
+            new_batch = get_new_batch(current_page, batch_size)
+            concepts.extend(new_batch)
+            current_page +=1
+            last_batch = new_batch
+
+        return self.params['response_object'].returns({
+            'status': {
+                'code': 10000,
+                'description': 'Ok'
+            },
+            'concepts': concepts
+        })
