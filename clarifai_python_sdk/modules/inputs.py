@@ -1,6 +1,7 @@
 # SYSTEM IMPORTS
 # import json
 from operator import itemgetter
+from sqlite3 import paramstyle
 
 # UTILS
 from clarifai_python_sdk.utils.filters import Filters
@@ -25,7 +26,8 @@ class Search:
         ):
 
         endpoint = UrlHandler().build(
-            'inputs__searches', {
+            'inputs__searches', 
+            path_variables= {
                 **self.params['user_data_object']
             }
         )
@@ -62,7 +64,8 @@ class Search:
     ):
 
         endpoint = UrlHandler().build(
-            'inputs__searches', {
+            'inputs__searches', 
+            path_variables={
                 **self.params['user_data_object']
             }
         )
@@ -137,7 +140,7 @@ class Search:
             per_page (int, optional)
 
         Returns:
-            (json str)
+            (json str or dict)
         """
  
         param_args = (threshold, page, per_page)
@@ -160,6 +163,18 @@ class Search:
         page: int = None,
         per_page: int = None
     ) -> str or dict:
+        """
+        Rank by input id based on visual similarity
+
+        Args:
+            input_id (str)
+            threshold (float or int, optional)
+            page (int, optional)
+            per_page (int, optional)
+
+        Returns:
+            (json str or dict)
+        """
 
         param_args = (threshold, page, per_page)
 
@@ -210,7 +225,6 @@ class Inputs:
             (dict)
         """
 
-        method   = 'post'
         endpoint = UrlHandler().build('inputs__post')
 
         conversion_map = {
@@ -227,7 +241,7 @@ class Inputs:
         }
 
         response = self.params['http_client'].make_request(
-            method=method,
+            method="POST",
             endpoint=endpoint,
             body=body
         )
@@ -251,16 +265,20 @@ class Inputs:
         Returns:
             (dict)
         """
-        method   = 'get'
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('inputs__stream', { 'app_id': app_id }) + f'?per_page={per_page}'
-        inputs   = []
 
-        if last_id:
-            endpoint = endpoint + f'&last_id={last_id}'
+        inputs   = []
+        app_id   = itemgetter('app_id')(self.params)
+        endpoint = UrlHandler().build(
+            'inputs__stream',
+            path_variables={ 'app_id': app_id },
+            query_params={
+                'per_page': per_page,
+                'last_id': last_id
+            }
+        )
 
         response = self.params['http_client'].make_request(
-            method=method,
+            method="GET",
             endpoint=endpoint
         )
 
@@ -322,7 +340,7 @@ class Inputs:
         Returns:
             (dict)
         """
-        method   = 'delete'
+
         endpoint = UrlHandler().build('inputs__post')
         
         body = { 
@@ -331,7 +349,7 @@ class Inputs:
         }
 
         response = self.params['http_client'].make_request(
-            method=method,
+            method="DELETE",
             endpoint=endpoint,
             body=body
         )

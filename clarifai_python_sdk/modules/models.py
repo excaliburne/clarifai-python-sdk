@@ -1,5 +1,7 @@
 # SYSTEM IMPORTS
+from lib2to3.pgen2.pgen import ParserGenerator
 from operator import itemgetter
+from sys import path
 
 # UTILS
 from clarifai_python_sdk.utils.url_handler import UrlHandler
@@ -32,12 +34,12 @@ class Models:
         Returns:
             (dict): Response dict
         """
-
-        path_variables = {
+        
+        path_variables={
             'model_id'        : model_id,
             'model_version_id': model_version_id
         }
-           
+
         endpoint = UrlHandler().build(
             'models__predict_without_version_id' if None in path_variables.values() else 'models__predict', 
             path_variables
@@ -74,7 +76,7 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__train', data={'model_id': model_id, 'app_id': app_id})
+        endpoint = UrlHandler().build('models__train', path_variables={'model_id': model_id, 'app_id': app_id})
 
         response = self.params['http_client'].make_request(
             method="post",
@@ -101,7 +103,14 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list', data={'app_id': app_id, **UrlHandler.optional_pagination_url(page, per_page)}) 
+        endpoint = UrlHandler().build(
+            'models__list', 
+            path_variables={'app_id': app_id},
+            query_params={
+                'page': page,
+                'per_page': per_page
+            }
+        ) 
 
         response = self.params['http_client'].make_request(
             method="get",
@@ -128,7 +137,14 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__list_model_types', data={'app_id': app_id, **UrlHandler.optional_pagination_url(page, per_page)})
+        endpoint = UrlHandler().build(
+            'models__list_model_types', 
+            path_variables={'app_id': app_id},
+            query_params={
+                'page': page,
+                'per_page': per_page
+            }
+        )
 
         response = self.params['http_client'].make_request(
             method="get",
@@ -153,7 +169,7 @@ class Models:
         endpoint = UrlHandler().build('models__get_model_by_id', data={'app_id': app_id, 'model_id': model_id})
 
         response = self.params['http_client'].make_request(
-            method="get",
+            method="GET",
             endpoint=endpoint
         )
 
@@ -179,11 +195,15 @@ class Models:
         app_id   = itemgetter('app_id')(self.params)
         endpoint = UrlHandler().build(
             'models__get_model_versions_by_model_id', 
-            data={'app_id': app_id, 'model_id': model_id, **UrlHandler.optional_pagination_url(page, per_page)}
+            path_variables={ 'app_id': app_id, 'model_id': model_id} ,
+            query_params={
+                'page': page,
+                'per_page': per_page
+            }
         )
 
         response = self.params['http_client'].make_request(
-            method="get",
+            method="GET",
             endpoint=endpoint
         )
 
@@ -202,32 +222,14 @@ class Models:
         """
 
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__get_model_training_inputs', data={'app_id': app_id, 'model_id': model_id})
+        endpoint = UrlHandler().build(
+            'models__get_model_training_inputs', 
+            data={'app_id': app_id, 'model_id': model_id}
+        )
 
         response = self.params['http_client'].make_request(
-            method="get",
+            method="GET",
             endpoint=endpoint
         )
 
         return self.params['response_object'].returns(response)
-
-
-    ### Not working somehow...
-    # def search(self, query: dict):
-
-    #     endpoint = UrlHandler().build('models__search')
-
-    #     body = {
-    #         'user_app_id': self.params['user_data_object'],
-    #         'model_query': query
-    #     }
-
-    #     response = self.params['http_client'].make_request(
-    #         method="post",
-    #         endpoint=endpoint,
-    #         body=body
-    #     )
-
-    #     return self.params['response_object'].returns(response)
-
-

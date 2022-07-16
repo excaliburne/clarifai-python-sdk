@@ -30,10 +30,17 @@ class Concepts:
         Returns:
             (json or dict)
         """
-        endpoint = UrlHandler().build('concepts__list', {
-            'app_id': self.params['user_data_object']['app_id'],
-            **UrlHandler.optional_pagination_url(page, per_page)
-        })
+        
+        endpoint = UrlHandler().build(
+            'concepts__list', 
+            path_variables={
+                'app_id': self.params['user_data_object']['app_id']
+            },
+            query_params={
+                'page': page,
+                'per_page': per_page
+            }
+        )
 
         response = self.params['http_client'].make_request(
             method="get",

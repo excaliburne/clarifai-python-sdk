@@ -34,7 +34,16 @@ def delete_keys_from_dict(d, to_delete):
     return d
 
 
-def delete_none_values(dictt: dict):
-    new_dict = {key: value for (key, value) in dictt.items() if value is not None}
+def delete_none_values(_dict):
+    """Delete None values recursively from all of the dictionaries"""
+    for key, value in list(_dict.items()):
+        if isinstance(value, dict):
+            delete_none_values(value)
+        elif value is None:
+            del _dict[key]
+        elif isinstance(value, list):
+            for v_i in value:
+                if isinstance(v_i, dict):
+                    delete_none_values(v_i)
 
-    return new_dict
+    return _dict
