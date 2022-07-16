@@ -2,8 +2,9 @@
 from clarifai_python_sdk.modules.apps import Apps
 from clarifai_python_sdk.modules.models import Models
 from clarifai_python_sdk.modules.response import Response
-from clarifai_python_sdk.modules.inputs import Inputs
+from clarifai_python_sdk.modules.inputs   import Inputs
 from clarifai_python_sdk.modules.concepts import Concepts
+from clarifai_python_sdk.modules.usage    import Usage
 
 # HTTP CLIENT
 from clarifai_python_sdk.http_client import HttpClient
@@ -23,9 +24,9 @@ class ClarifaiApi:
         **kwargs
     ) -> None:
         
-        self.token = token
-        self.user_id = user_id or 'me'
-        self.app_id = app_id
+        self.token    = token
+        self.user_id  = user_id or 'me'
+        self.app_id   = app_id
         self.base_url = base_url or API_BASE_URL
 
         params = { 
@@ -44,7 +45,8 @@ class ClarifaiApi:
                 'app_id': self.app_id
             }
  
-        self.apps = Apps(params)
-        self.models = Models(params)
-        self.inputs = Inputs(params)
+        self.apps     = Apps(params)
+        self.models   = Models(params)
+        self.inputs   = Inputs(params)
         self.concepts = Concepts(params)
+        self.usage    = Usage(params)

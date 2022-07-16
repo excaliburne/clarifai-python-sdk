@@ -2,6 +2,29 @@
 import json
 
 
+class Wrapper:
+    def __init__(
+        self, 
+        response,
+        params
+        ):
+        self.response = response 
+        self.params   = params   
+
+    
+    def to_dict(self):
+        return dict(self.response)
+
+    
+    def to_json(self):
+        additional_json_args = {}
+        pretty_print         = self.params['response_config'].get('pretty_print_if_json')
+        
+        if pretty_print is not None and pretty_print == True:
+            additional_json_args = { 'indent': 4 }
+
+        return json.dumps(self.response, **additional_json_args)
+
 class Response:
     def __init__(
         self,
@@ -10,33 +33,7 @@ class Response:
 
         self.params = params
 
-    
-    def _response_object(
-        self,
-        object: dict, 
-        pretty_print: bool = False,
-        delete_status: bool = False,
-        convert_json_to_dict: bool = False
-        ):
-
-        response = object
-
-        if convert_json_to_dict:
-            return dict(object)
-
-        if delete_status:
-            del response['status']
-
-        if pretty_print:
-            response = json.dumps(object, indent=4)
-
-        return response
-
 
     def returns(self, response: dict):
-        args = {}
 
-        if self.params.get('response_config'):
-            args = self.params['response_config']
-
-        return self._response_object(object=response, **args)
+        return Wrapper(response, self.params)

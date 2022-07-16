@@ -63,22 +63,16 @@ class Concepts:
         last_batch         = []
 
         def get_new_batch(page, per_page):
-            get_page  = self.list(page=page, per_page=per_page)
-            batch_res = []
+            get_page = self.list(page=page, per_page=per_page).to_dict()
+            concepts = get_page['concepts']
 
-            if (isinstance(get_page, dict)):
-                batch_res = get_page['concepts']
-            else:
-                batch_res = json.loads(get_page)['concepts']
-            
-            return batch_res
+            return concepts
         
         first_batch = get_new_batch(current_page, batch_size)
         concepts.extend(first_batch)
         last_batch = first_batch
 
         while len(last_batch) == batch_size:
-            print(current_page)
             new_batch = get_new_batch(current_page, batch_size)
             concepts.extend(new_batch)
             current_page +=1

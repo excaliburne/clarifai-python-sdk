@@ -19,8 +19,8 @@ class Search:
     def __call__(
         self, 
         name: str,
-        sort_by_modified_at: str = True,
-        sort_by_name: str = None,
+        sort_by_modified_at: bool = True,
+        sort_by_name: bool = None,
         page: str = None,
         per_page: str = None,
         ) -> str or dict:

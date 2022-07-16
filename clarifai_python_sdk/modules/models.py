@@ -1,7 +1,5 @@
 # SYSTEM IMPORTS
-from lib2to3.pgen2.pgen import ParserGenerator
 from operator import itemgetter
-from sys import path
 
 # UTILS
 from clarifai_python_sdk.utils.url_handler import UrlHandler
@@ -34,7 +32,7 @@ class Models:
         Returns:
             (dict): Response dict
         """
-        
+
         path_variables={
             'model_id'        : model_id,
             'model_version_id': model_version_id
@@ -224,7 +222,7 @@ class Models:
         app_id   = itemgetter('app_id')(self.params)
         endpoint = UrlHandler().build(
             'models__get_model_training_inputs', 
-            data={'app_id': app_id, 'model_id': model_id}
+            path_variables={ 'app_id': app_id, 'model_id': model_id } 
         )
 
         response = self.params['http_client'].make_request(

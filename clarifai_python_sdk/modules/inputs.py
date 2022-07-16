@@ -195,20 +195,6 @@ class Inputs:
         ):
         self.params = params
         self.search = Search(params)
-    
-
-    def _get_input_struct_from_type(
-        self, 
-        input_src: str, 
-        input_type: str
-        ):
-
-        struct = {}
-
-        if input_type == 'url':
-            struct['url'] = input_src
-        
-        return struct
 
 
     def add(
@@ -267,10 +253,9 @@ class Inputs:
         """
 
         inputs   = []
-        app_id   = itemgetter('app_id')(self.params)
         endpoint = UrlHandler().build(
             'inputs__stream',
-            path_variables={ 'app_id': app_id },
+            path_variables={ **self.params['user_data_object'] },
             query_params={
                 'per_page': per_page,
                 'last_id': last_id
@@ -309,7 +294,7 @@ class Inputs:
         def request_new_batch(**kwargs):
             nonlocal last_batch
 
-            stream_inputs_response = self.stream(per_page=per_page, **kwargs)
+            stream_inputs_response = self.stream(per_page=per_page, **kwargs).to_dict()
             last_batch             = stream_inputs_response['inputs']
             inputs.extend(last_batch)
 
@@ -371,7 +356,7 @@ class Inputs:
         def request_new_batch(**kwargs):
             nonlocal number_of_deleted_inputs, last_batch
 
-            stream_inputs_response = self.stream(per_page=per_page, **kwargs)
+            stream_inputs_response = self.stream(per_page=per_page, **kwargs).to_dict()
             last_batch             = stream_inputs_response['inputs']
             self.delete_by_ids(Filters(last_batch).ids_from_input_objects())
             number_of_deleted_inputs = number_of_deleted_inputs + len(last_batch) 
