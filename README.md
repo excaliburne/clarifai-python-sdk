@@ -1,1 +1,1 @@
-Soon to come!
+Soon to come! This package is yet not usable on a public scale.
