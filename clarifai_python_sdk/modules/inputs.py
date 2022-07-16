@@ -1,20 +1,14 @@
 # SYSTEM IMPORTS
-import json
+# import json
 from operator import itemgetter
 
-# ROOT
-from clarifai_python_sdk import endpoints
-
 # UTILS
-from clarifai_python_sdk.utils.dicts import (
-    get_dict_by_key_or_return_empty, get_existing_dicts_from_keys
-)
 from clarifai_python_sdk.utils.filters import Filters
 from clarifai_python_sdk.utils.urls import Urls
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
-class Searches:
+class Search:
     def __init__(
         self,
         params
@@ -22,43 +16,62 @@ class Searches:
         self.params = params
     
 
-    def filter_by_custom_concept(
+    def _ranks_request(
         self,
-        concepts: list,
-        page: int = None, 
-        per_page: int = None
-    ):
-        """
-        Search inputs annotated with given concept name and value
+        ranks: list,
+        threshold: float or int,
+        page: str,
+        per_page: str,
+        ):
 
-        Args:
-            concepts (list): Should look like:
-                - [{"name": "sky", "value": 1}, ...] for positive annotations
-                - [{"name": "sky", "value": O}, ...] for negative annotations
-                - [{"name": "sky"}, ...] or without value
-            page (int, optional)
-            per_page (int, optional)
-
-        Returns:
-            _type_: _description_
-        """
         endpoint = UrlHandler().build(
             'inputs__searches', {
-                **self.params['user_data_object'],
-                **UrlHandler().optional_pagination(page, per_page)
+                **self.params['user_data_object']
+            }
+        )
+
+        additional_params = {}
+
+        if threshold:
+            additional_params['min_value'] = threshold
+
+        body = { 
+            **UrlHandler.optional_pagination_object(page, per_page),
+            'searches': [{
+                'query': {
+                    'ranks': ranks
+                },
+                **additional_params
+            }]
+        }
+
+        response = self.params['http_client'].make_request(
+            method="POST",
+            endpoint=endpoint,
+            body=body
+        )
+
+        return self.params['response_object'].returns(response)
+    
+
+    def _filters_request(
+        self,
+        filters: list,
+        page: int,
+        per_page: int 
+    ):
+
+        endpoint = UrlHandler().build(
+            'inputs__searches', {
+                **self.params['user_data_object']
             }
         )
 
         body = { 
-            "searches": [{
-                "query": {
-                    "filters": [{
-                        "annotation": {
-                            "data": {
-                                "concepts": concepts
-                            }
-                        }
-                    }]
+            **UrlHandler.optional_pagination_object(page, per_page),
+            'searches': [{
+                'query': {
+                    'filters': filters
                 }
             }]
         }
@@ -72,13 +85,101 @@ class Searches:
         return self.params['response_object'].returns(response)
 
 
+    def filter_by_custom_concept(
+        self,
+        concepts: list,
+        page: int = None, 
+        per_page: int = None
+    ) -> str or dict:
+        """
+        Search inputs annotated with given concept name and value
+
+        Args:
+            concepts (list): Should look like:
+                - [{"name": "sky", "value": 1}, ...] for positive annotations
+                - [{"name": "sky", "value": O}, ...] for negative annotations
+                - [{"name": "sky"}, ...] or without value
+            page (int, optional)
+            per_page (int, optional)
+
+        Returns:
+            (json str)
+        """
+
+        param_args = (page, per_page)
+        
+        filters = [{
+            'annotation': {
+                'data': {
+                    'concepts': concepts
+                }
+            }
+        }]
+
+        return self._filters_request(filters, *param_args)
+    
+
+    def rank_by_image(
+        self,
+        image_object: dict,
+        threshold: float or int = None,
+        page: int = None,
+        per_page: int = None
+    ) -> str or dict:
+        """
+        Rank by image based on visual similarity 
+
+        Args:
+            image_object (dict): Should look like...
+                - { 'url': {URL_STRING} } ...with urls
+                - { 'base64': {BASE64_STRING} } ...with base64
+            page (int, optional)
+            per_page (int, optional)
+
+        Returns:
+            (json str)
+        """
+ 
+        param_args = (threshold, page, per_page)
+
+        ranks = [{
+            'annotation': {
+                'data': {
+                    'image': image_object
+                },
+            }
+        }]
+
+        return self._ranks_request(ranks, *param_args)
+    
+
+    def rank_by_input_id(
+        self,
+        input_id: str,
+        threshold: float or int = None,
+        page: int = None,
+        per_page: int = None
+    ) -> str or dict:
+
+        param_args = (threshold, page, per_page)
+
+        ranks = [{
+            'annotation': {
+                'input_id': input_id
+            }
+        }]
+
+        return self._ranks_request(ranks, *param_args)
+
+
+
 class Inputs:
     def __init__(
         self,
         params
         ):
         self.params = params
-        self.searches = Searches(params)
+        self.search = Search(params)
     
 
     def _get_input_struct_from_type(

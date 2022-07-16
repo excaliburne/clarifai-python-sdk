@@ -42,7 +42,7 @@ class UrlHandler:
 
     
     @classmethod
-    def optional_pagination(
+    def optional_pagination_url(
         cls, 
         page: str, 
         per_page: str
@@ -52,5 +52,20 @@ class UrlHandler:
         if page and per_page:
             dict_to_return['page']     = page
             dict_to_return['per_page'] = per_page
+        
+        return dict_to_return
+    
+
+    @classmethod
+    def optional_pagination_object(
+        cls, 
+        page: str, 
+        per_page: str
+        ) -> dict:
+        dict_to_return = {'pagination': {}}
+
+        if page and per_page:
+            dict_to_return['pagination'] = {'page': page}
+            dict_to_return['pagination'] = {'per_page': per_page}
         
         return dict_to_return
