@@ -19,7 +19,7 @@ class Apps:
         endpoint = UrlHandler().build('apps', {'user_id': user_id})
 
         response = self.params['http_client'].make_request(
-            method="get",
+            method="GET",
             endpoint=endpoint
         )
 
