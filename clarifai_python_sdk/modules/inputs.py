@@ -14,12 +14,71 @@ from clarifai_python_sdk.utils.urls import Urls
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
+class Searches:
+    def __init__(
+        self,
+        params
+        ):
+        self.params = params
+    
+
+    def filter_by_custom_concept(
+        self,
+        concepts: list,
+        page: int = None, 
+        per_page: int = None
+    ):
+        """
+        Search inputs annotated with given concept name and value
+
+        Args:
+            concepts (list): Should look like:
+                - [{"name": "sky", "value": 1}, ...] for positive annotations
+                - [{"name": "sky", "value": O}, ...] for negative annotations
+                - [{"name": "sky"}, ...] or without value
+            page (int, optional)
+            per_page (int, optional)
+
+        Returns:
+            _type_: _description_
+        """
+        endpoint = UrlHandler().build(
+            'inputs__searches', {
+                **self.params['user_data_object'],
+                **UrlHandler().optional_pagination(page, per_page)
+            }
+        )
+
+        body = { 
+            "searches": [{
+                "query": {
+                    "filters": [{
+                        "annotation": {
+                            "data": {
+                                "concepts": concepts
+                            }
+                        }
+                    }]
+                }
+            }]
+        }
+
+        response = self.params['http_client'].make_request(
+            method="POST",
+            endpoint=endpoint,
+            body=body
+        )
+
+        return self.params['response_object'].returns(response)
+
+
 class Inputs:
     def __init__(
         self,
         params
         ):
         self.params = params
+        self.searches = Searches(params)
     
 
     def _get_input_struct_from_type(
@@ -59,9 +118,11 @@ class Inputs:
 
         if convert_src: inputs = conversion_map[convert_src]()
 
+        formatted_input_objects = [{'data': input} for input in inputs]
+
         body = { 
             'user_app_id': self.params['user_data_object'],
-            'inputs': inputs
+            'inputs': formatted_input_objects
         }
 
         response = self.params['http_client'].make_request(
