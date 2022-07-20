@@ -272,10 +272,7 @@ class Inputs:
         if response['status']['code'] == 10000 and len(inputs) > 0:
             last_id = inputs[-1]['id']
 
-        return self.params['response_object'].returns({
-            'inputs': inputs,
-            'last_id': last_id
-        })
+        return self.params['response_object'].returns(response)
 
 
     def list_all(self) -> dict:
@@ -290,6 +287,7 @@ class Inputs:
         last_batch_count_sould_be = per_page
         inputs                    = []
         last_batch                = []
+        is_listing_success        = True
 
         def request_new_batch(**kwargs):
             nonlocal last_batch
@@ -308,8 +306,10 @@ class Inputs:
             request_new_batch(last_id=last_id)
 
         return self.params['response_object'].returns({
-            'inputs': inputs,
-            'inputs_number': len(inputs)
+            'status': {
+                'code': 10000 if is_listing_success else 10020
+            },
+            'inputs': inputs
         })
 
     
@@ -370,6 +370,9 @@ class Inputs:
             request_new_batch(last_id=last_id)
         
         return self.params['response_object'].returns({
-            'number_of_deleted_inputs': number_of_deleted_inputs,
+            'status': {
+                'code': 10000 if number_of_deleted_inputs > 0 else 10020
+            },
+            'number_of_delete_inputs': number_of_deleted_inputs
         })
 
