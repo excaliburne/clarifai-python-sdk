@@ -1,11 +1,9 @@
 # SYSTEM IMPORTS
-# import json
 from operator import itemgetter
-from sqlite3 import paramstyle
 
 # UTILS
 from clarifai_python_sdk.utils.filters import Filters
-from clarifai_python_sdk.utils.urls import Urls
+from clarifai_python_sdk.utils.data import Data
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
@@ -197,34 +195,34 @@ class Inputs:
         self.search = Search(params)
 
 
-    def add(
-        self, 
-        inputs: list,
-        convert_src: str = None
-        ) -> dict:
+    def add(self, inputs: list) -> dict or str:
         """Add inputs to Clarifai App
 
         Args:
             inputs (list): List of input objects
+                            - See example of input objects in data/inputs/add_mock.py
 
         Returns:
-            (dict)
+            (dict or str<json>)
         """
 
         endpoint = UrlHandler().build('inputs__post')
 
-        conversion_map = {
-            'convert_url_to_base_64': lambda: [Urls().input_object_to_base64(input) for input in inputs]
-        }
-
-        if convert_src: inputs = conversion_map[convert_src]()
-
-        formatted_input_objects = [{'data': input} for input in inputs]
+        for input in inputs:
+            input_type = 'image' if input.get('image') else 'video'
+            if input.get('convert_src_to_base64'):
+                input[input_type]['base64'] = Data.image_url_to_base_64(input[input_type]['url'])
+                del input[input_type]['url']
+                del input['convert_src_to_base64']
+        
+        clarifai_api_final_formatting = list(map(lambda input: {'data': input}, inputs))
 
         body = { 
             'user_app_id': self.params['user_data_object'],
-            'inputs': formatted_input_objects
+            'inputs': clarifai_api_final_formatting
         }
+
+        print(1, body)
 
         response = self.params['http_client'].make_request(
             method="POST",
@@ -232,9 +230,7 @@ class Inputs:
             body=body
         )
 
-        return self.params['response_object'].returns({
-            'response': response,
-        })
+        return self.params['response_object'].returns(response)
     
     
     def stream(
@@ -348,7 +344,7 @@ class Inputs:
         Returns:
             (dict): { 'number_of_deleted_inputs' }
         """
-        per_page                  = 50
+        per_page                  = 100
         last_batch_count_sould_be = per_page
         last_batch                = []
         number_of_deleted_inputs  = 0
