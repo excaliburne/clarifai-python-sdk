@@ -164,7 +164,10 @@ class Models:
         """
         
         app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__get_model_by_id', data={'app_id': app_id, 'model_id': model_id})
+        endpoint = UrlHandler().build(
+            'models__get_model_by_id', 
+            path_variables={'app_id': app_id, 'model_id': model_id}
+        )
 
         response = self.params['http_client'].make_request(
             method="GET",
