@@ -129,18 +129,25 @@ class Apps:
         return self.params['response_object'].returns(response)
 
 
-    def list_all(self) -> str or dict:
+    def list(self, page: int, per_page: int) -> str or dict:
         """
-        List all apps given a user_id
+        List all apps given a user_id.
+        - If pagination arguments are not provided, it will return all apps
+
+        Args:
+            page (int)
+            per_page (int)
 
         Returns:
-            (json or dict): response object
+            (json or dict): Response Object
         """
         user_id  = self.params['user_id']
         endpoint = UrlHandler().build(
             'apps',
-            path_variables={
-                'user_id': user_id
+            path_variables={ 'user_id': user_id },
+            query_params={
+                'page': page,
+                'per_page': per_page
             }
         )
 

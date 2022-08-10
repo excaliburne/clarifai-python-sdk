@@ -222,8 +222,6 @@ class Inputs:
             'inputs': clarifai_api_final_formatting
         }
 
-        print(1, body)
-
         response = self.params['http_client'].make_request(
             method="POST",
             endpoint=endpoint,

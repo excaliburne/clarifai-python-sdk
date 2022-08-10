@@ -47,7 +47,7 @@ class Models:
 
         body = { 
             'user_app_id': self.params['user_data_object'],
-            'inputs': inputs_payload
+            'inputs': inputs_payload,
         }
 
         response = self.params['http_client'].make_request(

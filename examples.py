@@ -23,5 +23,6 @@ response = clarifai.inputs.search.filter_by_custom_concept(concepts=[{ 'name': '
 
 # apps
 response = clarifai.apps.create(id='test-app-4').to_json()
+response = clarifai.apps.list().to_dict()
 response = clarifai.apps.get('clarifai-toolbox-five').to_json()
 response = clarifai.apps.delete(app_id="test-delete").to_json()
