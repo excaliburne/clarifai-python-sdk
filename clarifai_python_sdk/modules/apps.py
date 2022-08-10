@@ -39,7 +39,7 @@ class Search:
 
         endpoint = UrlHandler().build(
             'apps', 
-            path_variables={**self.params['user_data_object']},
+            path_variables={'user_id': self.params['user_id']},
             query_params={
                 'name': f'*{name}*',
                 'sort_by_modified_at': None if sort_by_name == True else sort_by_modified_at,
@@ -88,7 +88,7 @@ class Apps:
 
         args = dict(filter(lambda arg: arg[0] != 'self' and arg[1] is not None, locals().items()))
 
-        endpoint = UrlHandler().build('apps', path_variables={**self.params['user_data_object']})
+        endpoint = UrlHandler().build('apps', path_variables={'user_id': self.params['user_id']})
 
         json_body = {
             'apps': [args]
@@ -116,7 +116,7 @@ class Apps:
         endpoint = UrlHandler().build(
             'apps_with_app_id', 
             path_variables={
-                'user_id': self.params['user_data_object']['user_id'],
+                'user_id': self.params['user_id'],
                 'app_id': app_id
             }
         )
@@ -129,7 +129,7 @@ class Apps:
         return self.params['response_object'].returns(response)
 
 
-    def list(self, page: int, per_page: int) -> str or dict:
+    def list(self, page: int = None, per_page: int = None) -> str or dict:
         """
         List all apps given a user_id.
         - If pagination arguments are not provided, it will return all apps
@@ -141,10 +141,9 @@ class Apps:
         Returns:
             (json or dict): Response Object
         """
-        user_id  = self.params['user_id']
         endpoint = UrlHandler().build(
             'apps',
-            path_variables={ 'user_id': user_id },
+            path_variables={'user_id': self.params['user_id']},
             query_params={
                 'page': page,
                 'per_page': per_page
@@ -175,7 +174,7 @@ class Apps:
         endpoint = UrlHandler().build(
             'apps_with_app_id', 
             path_variables={
-                'user_id': self.params['user_data_object']['user_id'],
+                'user_id': self.params['user_id'],
                 'app_id': app_id
             }
         )
