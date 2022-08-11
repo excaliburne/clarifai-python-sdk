@@ -25,6 +25,7 @@ class Wrapper:
 
         return json.dumps(self.response, **additional_json_args)
 
+
 class Response:
     def __init__(
         self,

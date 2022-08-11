@@ -1,11 +1,8 @@
 # SYSTEM IMPORTS
 
-# 
-from clarifai_python_sdk.utils.url_handler import UrlHandler
-
 # UTILS
+from clarifai_python_sdk.utils.url_handler import UrlHandler
 from clarifai_python_sdk.utils import dicts
-
 
 
 class Search:
@@ -30,7 +27,7 @@ class Search:
         Args:
             name (str)
             sort_by_modified_at (str, optional)
-            page (str, optional)
+            page (str, optional)code 
             per_page (str, optional)
 
         Returns:
@@ -42,8 +39,8 @@ class Search:
             path_variables={'user_id': self.params['user_id']},
             query_params={
                 'name': f'*{name}*',
-                'sort_by_modified_at': None if sort_by_name == True else sort_by_modified_at,
-                'sort_by_name': sort_by_name,
+                'sort_by_modified_at': None if sort_by_name == True else 'true',
+                'sort_by_name': None if sort_by_modified_at == True or sort_by_name == None else 'true',
                 'page': page,
                 'per_page': per_page
             }

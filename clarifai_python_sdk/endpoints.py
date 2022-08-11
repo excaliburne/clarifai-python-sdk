@@ -1,4 +1,5 @@
 ENDPOINTS = {
+    'me':                                     '/v2/users/me',
 
     'apps':                                   '/v2/users/{user_id}/apps',
     'apps_with_app_id':                       '/v2/users/{user_id}/apps/{app_id}',

@@ -9,6 +9,9 @@ from clarifai_python_sdk.modules.usage    import Usage
 # HTTP CLIENT
 from clarifai_python_sdk.http_client import HttpClient
 
+# UTILS
+from clarifai_python_sdk.utils.url_handler import UrlHandler
+
 # CONSTANTS
 from clarifai_python_sdk.constants import API_BASE_URL
 from clarifai_python_sdk.endpoints import ENDPOINTS
@@ -44,9 +47,28 @@ class ClarifaiApi:
                 'user_id': self.user_id,
                 'app_id': self.app_id
             }
+        
+        self.params = params
  
         self.apps     = Apps(params)
         self.models   = Models(params)
         self.inputs   = Inputs(params)
         self.concepts = Concepts(params)
         self.usage    = Usage(params)
+    
+
+    def me(self):
+        """
+        Who am I? 
+
+        Returns:
+            (Class): Wrapper
+        """
+        endpoint = UrlHandler().build('me')
+
+        response = self.params['http_client'].make_request(
+            method="GET",
+            endpoint=endpoint
+        )
+
+        return self.params['response_object'].returns(response)
