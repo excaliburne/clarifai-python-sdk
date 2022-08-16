@@ -16,7 +16,7 @@ class HttpClient:
         self, 
         method: str, 
         endpoint: str, 
-        body: dict = None
+        body: dict = None,
         ) -> json:
 
         method = method.lower()

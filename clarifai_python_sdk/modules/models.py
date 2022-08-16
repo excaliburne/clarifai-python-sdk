@@ -1,26 +1,25 @@
-# SYSTEM IMPORTS
+# SYSTEM
 from operator import itemgetter
+
+# PACKAGE
+from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
+from clarifai_python_sdk.response import ResponseWrapper
 
 # UTILS
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
 class Models:
-    def __init__(
-        self,
-        params
-        ):
+    def __init__(self, params: dict):
         self.params = params
     
-
-    # TODO: 
-    #   - 
     def predict(
         self, 
         inputs: list,
         model_id: str, 
-        model_version_id: str = None
-        ):
+        model_version_id: str = None,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """
         Predict endpoint
 
@@ -33,36 +32,34 @@ class Models:
             (dict): Response dict
         """
 
-        path_variables={
+        path_variables = {
             'model_id'        : model_id,
             'model_version_id': model_version_id
         }
-
-        endpoint = UrlHandler().build(
-            'models__predict_without_version_id' if None in path_variables.values() else 'models__predict', 
-            path_variables
-        )
-
+        
         inputs_payload = [{'data': input} for input in inputs]
 
         body = { 
-            'user_app_id': self.params['user_data_object'],
+            'user_app_id': auth_object.get('user_app_id', {}) or self.params['user_app_id'],
             'inputs': inputs_payload,
         }
 
-        response = self.params['http_client'].make_request(
-            method="post",
-            endpoint=endpoint,
-            body=body
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__predict_without_version_id" if None in path_variables.values() else 'models__predict',
+            method="POST",
+            path_variables=path_variables,
+            body=body,
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)
 
     def train(
         self,
-        model_id: str
-        ):
+        model_id: str,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """
         Start training a model 
 
@@ -73,22 +70,25 @@ class Models:
             (Response Object)
         """
 
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build('models__train', path_variables={'model_id': model_id, 'app_id': app_id})
-
-        response = self.params['http_client'].make_request(
-            method="post",
-            endpoint=endpoint
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__train",
+            method="POST",
+            path_variables={
+                'model_id': model_id, 
+                **(auth_object.get('user_app_id', {}) or self.params['user_app_id'])
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
+        return ResponseWrapper(self.params, response_object=response_object)
 
-    
     def list(
         self,
         page: int = None,
-        per_page: int = None
-        ):
+        per_page: int = None,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """
         List models present in the app_id provided
 
@@ -100,29 +100,26 @@ class Models:
             (Response Object)
         """
 
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build(
-            'models__list', 
-            path_variables={'app_id': app_id},
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__list",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
             query_params={
                 'page': page,
                 'per_page': per_page
-            }
-        ) 
-
-        response = self.params['http_client'].make_request(
-            method="get",
-            endpoint=endpoint
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)
     
     def list_model_types(
         self,
         page: int = None,
-        per_page: int = None
-        ):
+        per_page: int = None,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """
         List model types
 
@@ -134,25 +131,21 @@ class Models:
             (Response Object)
         """
 
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build(
-            'models__list_model_types', 
-            path_variables={'app_id': app_id},
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__list_model_types",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
             query_params={
                 'page': page,
                 'per_page': per_page
-            }
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        response = self.params['http_client'].make_request(
-            method="get",
-            endpoint=endpoint
-        )
+        return ResponseWrapper(self.params, response_object=response_object)
 
-        return self.params['response_object'].returns(response)
-
-
-    def get_model_by_id(self, model_id: str):
+    def get_model_by_id(self, model_id: str, auth_object: dict = {}) -> ResponseWrapper:
         """
         Get model by ID
 
@@ -163,26 +156,26 @@ class Models:
             (Response Object)
         """
         
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build(
-            'models__get_model_by_id', 
-            path_variables={'app_id': app_id, 'model_id': model_id}
-        )
-
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__get_model_by_id",
             method="GET",
-            endpoint=endpoint
+            path_variables={
+                **(auth_object.get('user_app_id', {}) or self.params['user_app_id']),
+                'model_id': model_id
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)
 
     def get_model_versions_by_model_id(
         self, 
         model_id: str,
         page: int = None,
-        per_page: int = None
-        ):
+        per_page: int = None,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """
         Get a list of model versions given a model_id
 
@@ -193,25 +186,24 @@ class Models:
             (Response Object)
         """
 
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build(
-            'models__get_model_versions_by_model_id', 
-            path_variables={ 'app_id': app_id, 'model_id': model_id} ,
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__get_model_versions_by_model_id",
+            method="GET",
+            path_variables={
+                **(auth_object.get('user_app_id', {}) or self.params['user_app_id']),
+                'model_id': model_id
+            },
             query_params={
                 'page': page,
                 'per_page': per_page
-            }
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        response = self.params['http_client'].make_request(
-            method="GET",
-            endpoint=endpoint
-        )
-
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)
     
-    def get_model_training_inputs(self, model_id: str):
+    def get_model_training_inputs(self, model_id: str, auth_object: dict = {}) -> ResponseWrapper:
         """
         Get a model's training inputs
 
@@ -222,15 +214,15 @@ class Models:
             (Response)
         """
 
-        app_id   = itemgetter('app_id')(self.params)
-        endpoint = UrlHandler().build(
-            'models__get_model_training_inputs', 
-            path_variables={ 'app_id': app_id, 'model_id': model_id } 
-        )
-
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="models__get_model_training_inputs",
             method="GET",
-            endpoint=endpoint
+            path_variables={
+                **(auth_object.get('user_app_id', {}) or self.params['user_app_id']),
+                'model_id': model_id
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
+        return ResponseWrapper(self.params, response_object=response_object)    

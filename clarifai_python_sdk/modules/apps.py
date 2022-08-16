@@ -1,4 +1,8 @@
-# SYSTEM IMPORTS
+# SYSTEM
+
+# PACKAGE
+from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
+from clarifai_python_sdk.response import ResponseWrapper
 
 # UTILS
 from clarifai_python_sdk.utils.url_handler import UrlHandler
@@ -6,13 +10,9 @@ from clarifai_python_sdk.utils import dicts
 
 
 class Search:
-    def __init__(
-        self,
-        params
-        ):
+    def __init__(self, params: dict):
         self.params = params
 
-    
     def __call__(
         self, 
         name: str,
@@ -20,6 +20,7 @@ class Search:
         sort_by_name: bool = None,
         page: str = None,
         per_page: str = None,
+        auth_object: dict = {}
         ) -> str or dict:
         """
         Search Clarifai apps by name
@@ -34,42 +35,36 @@ class Search:
             (json or dict)
         """
 
-        endpoint = UrlHandler().build(
-            'apps', 
-            path_variables={'user_id': self.params['user_id']},
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="apps",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
             query_params={
                 'name': f'*{name}*',
                 'sort_by_modified_at': None if sort_by_name == True else 'true',
                 'sort_by_name': None if sort_by_modified_at == True or sort_by_name == None else 'true',
                 'page': page,
                 'per_page': per_page
-            }
-        )
-        
-        response = self.params['http_client'].make_request(
-            method="GET",
-            endpoint=endpoint,
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)    
 
 class Apps:
-    def __init__(
-        self,
-        params
-        ):
+    def __init__(self, params: dict):
         self.params = params
         self.search = Search(params)
 
-    
     def create(
         self,
         id: str,
         name: str = None,
         default_language: str = None,
-        default_workflow_id: str = None
-    ) -> str or dict: 
+        default_workflow_id: str = None,
+        auth_object: dict = {}
+    ) -> ResponseWrapper: 
         """
         Create Clarifai Application
 
@@ -80,27 +75,27 @@ class Apps:
             default_workflow_id (str, optional)
 
         Returns:
-            (json or dict)
+            (Object) - ResponseWrapper
         """
 
         args = dict(filter(lambda arg: arg[0] != 'self' and arg[1] is not None, locals().items()))
-
-        endpoint = UrlHandler().build('apps', path_variables={'user_id': self.params['user_id']})
 
         json_body = {
             'apps': [args]
         }
 
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="apps",
             method="POST",
-            endpoint=endpoint,
-            body=json_body
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
+            body=json_body,
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
+        return ResponseWrapper(self.params, response_object=response_object)    
 
-
-    def get(self, app_id: str) -> str or dict:
+    def get(self, app_id: str, auth_object: dict = {}) -> ResponseWrapper:
         """
         Get app by app_id
 
@@ -108,25 +103,25 @@ class Apps:
             app_id (str)
 
         Returns:
-            (json or dict)
+            (Object) - ResponseWrapper
         """
-        endpoint = UrlHandler().build(
-            'apps_with_app_id', 
-            path_variables={
-                'user_id': self.params['user_id'],
-                'app_id': app_id
-            }
-        )
 
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="apps_with_app_id",
             method="GET",
-            endpoint=endpoint
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
+        return ResponseWrapper(self.params, response_object=response_object)    
 
-
-    def list(self, page: int = None, per_page: int = None) -> str or dict:
+    def list(
+        self, 
+        page: int = None, 
+        per_page: int = None,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """
         List all apps given a user_id.
         - If pagination arguments are not provided, it will return all apps
@@ -136,26 +131,24 @@ class Apps:
             per_page (int)
 
         Returns:
-            (json or dict): Response Object
+            (Object): ResponseWrapper
         """
-        endpoint = UrlHandler().build(
-            'apps',
-            path_variables={'user_id': self.params['user_id']},
+
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="apps",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
             query_params={
                 'page': page,
                 'per_page': per_page
-            }
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        response = self.params['http_client'].make_request(
-            method="GET",
-            endpoint=endpoint
-        )
-
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)    
     
-    def delete(self, app_id: str) -> str or dict:
+    def delete(self, app_id: str, auth_object: dict = {}) -> ResponseWrapper:
         """
         Delete Clarifai application by app_id
 
@@ -163,22 +156,20 @@ class Apps:
             app_id (str)
 
         Returns:
-            (json or dict)
+            (Object) - ResponseWrapper
         """
 
-        # even though the "app_id" is present on the self.params['user_data_object']
-        # we want to make sure the app_id is explicitely specified while calling this function
-        endpoint = UrlHandler().build(
-            'apps_with_app_id', 
-            path_variables={
-                'user_id': self.params['user_id'],
-                'app_id': app_id
-            }
-        )
-
-        response = self.params['http_client'].make_request(
+        # even though the "app_id" is present on the self.params['user_app_id']...
+        # ...we want to make sure the app_id is explicitely specified while calling this function
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="apps_with_app_id",
             method="DELETE",
-            endpoint=endpoint
+            path_variables={
+                'app_id': app_id,
+                **(auth_object.get('user_app_id', {}) or self.params['user_app_id'])
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
+        return ResponseWrapper(self.params, response_object=response_object)

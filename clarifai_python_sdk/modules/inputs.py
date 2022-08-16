@@ -1,34 +1,30 @@
 # SYSTEM IMPORTS
 from operator import itemgetter
 
+# PACKAGE
+from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
+from clarifai_python_sdk.response              import ResponseWrapper
+from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
+
 # UTILS
-from clarifai_python_sdk.utils.filters import Filters
-from clarifai_python_sdk.utils.data import Data
+from clarifai_python_sdk.utils.filters     import Filters
+from clarifai_python_sdk.utils.data        import Data
 from clarifai_python_sdk.utils.url_handler import UrlHandler
+from clarifai_python_sdk.utils.decorators  import set_limits, handle_exception
 
 
 class Search:
-    def __init__(
-        self,
-        params
-        ):
+    def __init__(self, params: dict):
         self.params = params
     
-
     def _ranks_request(
         self,
         ranks: list,
         threshold: float or int,
         page: str,
         per_page: str,
-        ):
-
-        endpoint = UrlHandler().build(
-            'inputs__searches', 
-            path_variables= {
-                **self.params['user_data_object']
-            }
-        )
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
 
         additional_params = {}
 
@@ -45,28 +41,24 @@ class Search:
             }]
         }
 
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="inputs__searches",
             method="POST",
-            endpoint=endpoint,
-            body=body
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id']),},
+            body=body,
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-    
+        return ResponseWrapper(self.params, response_object=response_object)        
 
     def _filters_request(
         self,
         filters: list,
         page: int,
-        per_page: int 
-    ):
-
-        endpoint = UrlHandler().build(
-            'inputs__searches', 
-            path_variables={
-                **self.params['user_data_object']
-            }
-        )
+        per_page: int,
+        auth_object: dict = {}
+    ) -> ResponseWrapper:
 
         body = { 
             **UrlHandler.optional_pagination_object(page, per_page),
@@ -77,21 +69,24 @@ class Search:
             }]
         }
 
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="inputs__searches",
             method="POST",
-            endpoint=endpoint,
-            body=body
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id']),},
+            body=body,
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)        
 
     def filter_by_custom_concept(
         self,
         concepts: list,
         page: int = None, 
-        per_page: int = None
-    ) -> str or dict:
+        per_page: int = None,
+        auth_object: dict = {}
+    ) -> ResponseWrapper:
         """
         Search inputs annotated with given concept name and value
 
@@ -104,10 +99,10 @@ class Search:
             per_page (int, optional)
 
         Returns:
-            (json str)
+            (Object) - ResponseWrapper
         """
 
-        param_args = (page, per_page)
+        param_args = (page, per_page, auth_object)
         
         filters = [{
             'annotation': {
@@ -125,8 +120,9 @@ class Search:
         image_object: dict,
         threshold: float or int = None,
         page: int = None,
-        per_page: int = None
-    ) -> str or dict:
+        per_page: int = None,
+        auth_object: dict = {}
+    ) -> ResponseWrapper:
         """
         Rank by image based on visual similarity 
 
@@ -138,10 +134,10 @@ class Search:
             per_page (int, optional)
 
         Returns:
-            (json str or dict)
+            (Object) - ResponseWrapper
         """
  
-        param_args = (threshold, page, per_page)
+        param_args = (threshold, page, per_page, auth_object)
 
         ranks = [{
             'annotation': {
@@ -152,15 +148,15 @@ class Search:
         }]
 
         return self._ranks_request(ranks, *param_args)
-    
 
     def rank_by_input_id(
         self,
         input_id: str,
         threshold: float or int = None,
         page: int = None,
-        per_page: int = None
-    ) -> str or dict:
+        per_page: int = None,
+        auth_object: dict = {}
+    ) -> ResponseWrapper:
         """
         Rank by input id based on visual similarity
 
@@ -171,10 +167,10 @@ class Search:
             per_page (int, optional)
 
         Returns:
-            (json str or dict)
+            (Object) - ResponseWrapper
         """
 
-        param_args = (threshold, page, per_page)
+        param_args = (threshold, page, per_page, auth_object)
 
         ranks = [{
             'annotation': {
@@ -185,17 +181,18 @@ class Search:
         return self._ranks_request(ranks, *param_args)
 
 
-
 class Inputs:
-    def __init__(
-        self,
-        params
-        ):
+    def __init__(self, params: dict):
         self.params = params
         self.search = Search(params)
 
-
-    def add(self, inputs: list) -> dict or str:
+    @handle_exception
+    @set_limits({ 'inputs': (128, 1) })
+    def add(
+        self,
+        inputs: list,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """Add inputs to Clarifai App
 
         Args:
@@ -203,10 +200,8 @@ class Inputs:
                             - See example of input objects in data/inputs/add_mock.py
 
         Returns:
-            (dict or str<json>)
+            (Object) ResponseWrapper
         """
-
-        endpoint = UrlHandler().build('inputs__post')
 
         for input in inputs:
             input_type = 'image' if input.get('image') else 'video'
@@ -218,56 +213,79 @@ class Inputs:
         clarifai_api_final_formatting = list(map(lambda input: {'data': input}, inputs))
 
         body = { 
-            'user_app_id': self.params['user_data_object'],
+            'user_app_id': auth_object.get('user_app_id', self.params['user_app_id']),
             'inputs': clarifai_api_final_formatting
         }
 
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="inputs__post",
             method="POST",
-            endpoint=endpoint,
-            body=body
+            body=body,
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
+        return ResponseWrapper(self.params, response_object=response_object)
     
+    def list(
+        self,
+        page: int = 1,
+        per_page: int = 128,
+        auth_object: dict = {}
+    ):
+        """List Inputs.
+
+        Args:
+            page (int, optional): Defaults to 1.
+            per_page (int, optional): Defaults to 128.
+            user_app_id (dict, optional):  Defaults to {}.
+
+        Returns:
+            _type_: _description_
+        """
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="inputs__list",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
+            query_params={
+                'page': page,
+                'per_page': per_page
+            },
+            auth_object=auth_object,
+            package_params=self.params
+        )
+
+        return ResponseWrapper(self.params, response_object=response_object)
+
     
     def stream(
         self,
-        per_page: int = 30,
-        last_id: int = None
-        ) -> dict:
+        per_page: int = 128,
+        last_id: int = None,
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
         """Streaming (paginating) inputs in given Clarifai app
 
         Args:
-            per_page (int, optional): Defaults to 30.
+            per_page (int, optional): Defaults to 128.
             last_id (int, optional): Defaults to None.
 
         Returns:
             (dict)
         """
-
-        inputs   = []
-        endpoint = UrlHandler().build(
-            'inputs__stream',
-            path_variables={ **self.params['user_data_object'] },
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="inputs__stream",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
             query_params={
                 'per_page': per_page,
                 'last_id': last_id
-            }
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        response = self.params['http_client'].make_request(
-            method="GET",
-            endpoint=endpoint
-        )
-
-        inputs = response['inputs']
-
-        if response['status']['code'] == 10000 and len(inputs) > 0:
-            last_id = inputs[-1]['id']
-
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)
 
     def list_all(self) -> dict:
         """Lists all inputs objects in app
@@ -277,8 +295,9 @@ class Inputs:
         Returns:
             (dict): { 'inputs', 'inputs_number' }
         """
-        per_page                  = 10    
-        last_batch_count_sould_be = per_page
+        PER_PAGE                   = 100  
+        LAST_BATCH_COUNT_SHOULD_BE = PER_PAGE
+
         inputs                    = []
         last_batch                = []
         is_listing_success        = True
@@ -286,30 +305,34 @@ class Inputs:
         def request_new_batch(**kwargs):
             nonlocal last_batch
 
-            stream_inputs_response = self.stream(per_page=per_page, **kwargs).to_dict()
-            last_batch             = stream_inputs_response['inputs']
+            stream_inputs_response = self.stream(per_page=PER_PAGE, **kwargs).response.dict
+            last_batch             = stream_inputs_response.get('inputs', [])
             inputs.extend(last_batch)
 
         request_new_batch()
 
-        while len(last_batch) == last_batch_count_sould_be:        
+        while len(last_batch) == LAST_BATCH_COUNT_SHOULD_BE:        
             last_id = last_batch[-1]['id']
             last_batch.clear()
 
             # Provide last_id to get the next set of inputs.
             request_new_batch(last_id=last_id)
 
-        return self.params['response_object'].returns({
-            'status': {
+        response_schema = {
+             'status': {
                 'code': 10000 if is_listing_success else 10020
             },
-            'inputs': inputs
-        })
+            **({'inputs': inputs} if inputs else {})
+        }
 
-    
+        return ResponseWrapper(self.params, response_dict=response_schema)
+
+    @handle_exception
+    @set_limits({ 'inputs_ids': (128, 1) })
     def delete_by_ids(
         self,
-        inputs_ids: list
+        inputs_ids: list,
+        auth_object: dict = {}
         ) -> dict:
         """Delete a list of inputs by input_ids
 
@@ -320,21 +343,21 @@ class Inputs:
             (dict)
         """
 
-        endpoint = UrlHandler().build('inputs__post')
-        
         body = { 
             'user_app_id': self.params['user_data_object'],
             'ids': inputs_ids
         }
 
-        response = self.params['http_client'].make_request(
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="inputs__post",
             method="DELETE",
-            endpoint=endpoint,
-            body=body
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
+            body=body,
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        return self.params['response_object'].returns(response)
-
+        return ResponseWrapper(self.params, response_object=response_object)
 
     def delete_all(self) -> dict:
         """Deletes all app inputs by streaming
@@ -350,7 +373,7 @@ class Inputs:
         def request_new_batch(**kwargs):
             nonlocal number_of_deleted_inputs, last_batch
 
-            stream_inputs_response = self.stream(per_page=per_page, **kwargs).to_dict()
+            stream_inputs_response = self.stream(per_page=per_page, **kwargs).response.dict
             last_batch             = stream_inputs_response['inputs']
             self.delete_by_ids(Filters(last_batch).ids_from_input_objects())
             number_of_deleted_inputs = number_of_deleted_inputs + len(last_batch) 
@@ -362,11 +385,21 @@ class Inputs:
             last_batch.clear()
 
             request_new_batch(last_id=last_id)
-        
-        return self.params['response_object'].returns({
+
+        response_schema = {
             'status': {
-                'code': 10000 if number_of_deleted_inputs > 0 else 10020
+                'code': ClarifaiStatusCodes.SUCCESS
             },
             'number_of_delete_inputs': number_of_deleted_inputs
-        })
+        }
+        
+        return ResponseWrapper(
+            self.params,
+            response_dict=response_schema
+        )
 
+    def reupload_failed_inputs_as_base64(self):
+        pass
+
+    def reupload_existing_inputs_as_base64(self):
+        pass

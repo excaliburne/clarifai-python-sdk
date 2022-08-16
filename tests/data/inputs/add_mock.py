@@ -3,7 +3,7 @@ Only 'convert_src_to_base64' key is specific to this sdk, any other keys is as t
     - This argument/key is gives the option to convert a url to base64 before the input is sent to Clarifai's API
 """
 
-INPUTS_UPLOAD_TEST_SET = [
+IMAGES_UPLOAD_TEST_SET = [
     {
         'image': {
             'url': 'https://www.thespruce.com/thmb/gAq4rWuYwX-hPukDxxDfksR7-2c=/1821x1366/smart/filters:no_upscale()/master-bathroom-design-ideas-4129362-hero-d896a889451341dfaa59c5b2beacf02d.jpg'

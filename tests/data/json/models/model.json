@@ -1,0 +1,121 @@
+{
+    "model": {
+        "id": "test_name",
+        "name": "test",
+        "created_at": "2021-05-25T10:58:39.809591Z",
+        "modified_at": "2022-07-21T08:26:25.612816Z",
+        "app_id": "clarifai-toolbox-five",
+        "output_info": {
+            "output_config": {
+                "concepts_mutually_exclusive": false,
+                "closed_environment": false,
+                "max_concepts": 0,
+                "min_value": 0
+            },
+            "message": "Show output_info with: GET /models/{model_id}/output_info",
+            "params": {
+                "max_concepts": 20,
+                "select_concepts": []
+            }
+        },
+        "model_version": {
+            "id": "1ad45ebe9cd44cfaa3e1c11c41625c2b",
+            "created_at": "2022-08-09T07:32:46.558510Z",
+            "status": {
+                "code": 21100,
+                "description": "Model is trained and ready"
+            },
+            "active_concept_count": 10,
+            "metrics": {
+                "status": {
+                    "code": 21300,
+                    "description": "Model was successfully evaluated."
+                },
+                "summary": {
+                    "macro_avg_roc_auc": 1,
+                    "macro_std_roc_auc": 0,
+                    "macro_avg_f1_score": 1,
+                    "macro_std_f1_score": 0,
+                    "macro_avg_precision": 1,
+                    "macro_avg_recall": 0.75
+                }
+            },
+            "total_input_count": 5,
+            "train_stats": {
+                "loss_curve": [
+                    {
+                        "cost": 3.59528
+                    },
+                    {
+                        "epoch": 51,
+                        "global_step": 4,
+                        "cost": 1.3211222
+                    },
+                    {
+                        "epoch": 102,
+                        "global_step": 8,
+                        "cost": 0.17991632
+                    },
+                    {
+                        "epoch": 153,
+                        "global_step": 12,
+                        "cost": 0.11450393
+                    },
+                    {
+                        "epoch": 204,
+                        "global_step": 16,
+                        "cost": 0.12657978
+                    },
+                    {
+                        "epoch": 256,
+                        "global_step": 20,
+                        "cost": 0.115643814
+                    },
+                    {
+                        "epoch": 307,
+                        "global_step": 24,
+                        "cost": 0.10522526
+                    },
+                    {
+                        "epoch": 358,
+                        "global_step": 28,
+                        "cost": 0.06510132
+                    },
+                    {
+                        "epoch": 409,
+                        "global_step": 32,
+                        "cost": 0.0049067
+                    },
+                    {
+                        "epoch": 460,
+                        "global_step": 36,
+                        "cost": 0.012447031
+                    }
+                ]
+            },
+            "completed_at": "2022-08-09T07:32:54.133488Z",
+            "visibility": {
+                "gettable": 10
+            },
+            "app_id": "clarifai-toolbox-five",
+            "user_id": "excaliburne",
+            "metadata": {}
+        },
+        "user_id": "excaliburne",
+        "input_info": {},
+        "train_info": {
+            "params": {
+                "dataset_version_id": ""
+            }
+        },
+        "model_type_id": "embedding-classifier",
+        "visibility": {
+            "gettable": 10
+        },
+        "metadata": {},
+        "presets": null,
+        "languages": [],
+        "import_info": {},
+        "workflow_recommended": false
+    }
+}

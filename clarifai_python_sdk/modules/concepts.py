@@ -1,87 +1,82 @@
-# SYSTEM IMPORTS
-import json
+# SYSTEM 
+from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
+from clarifai_python_sdk.response              import ResponseWrapper 
+from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
 
 # UTILS
 from clarifai_python_sdk.utils.url_handler import UrlHandler
 
 
 class Concepts:
-
-    def __init__(
-        self,
-        params
-        ):
-        
+    def __init__(self, params: dict):
         self.params = params
     
-
     def list(
         self,
         page: int = 1,
-        per_page: int = 100
-    ):
+        per_page: int = 100,
+        auth_object: int = {}
+    ) -> ResponseWrapper:
         """
         List concepts in app
 
         Args:
-            page (str, optional): defaults to 1.
-            per_page (str, optional): defaults to 100.
+            page (str, optional): Defaults to 1.
+            per_page (str, optional): Defaults to 100.
 
         Returns:
-            (json or dict)
+            (Object) - ResponseWrapper
         """
-        
-        endpoint = UrlHandler().build(
-            'concepts__list', 
-            path_variables={
-                'app_id': self.params['user_data_object']['app_id']
-            },
+
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name="concepts__list",
+            method="GET",
+            path_variables={**(auth_object.get('user_app_id', {}) or self.params['user_app_id'])},
             query_params={
                 'page': page,
                 'per_page': per_page
-            }
+            },
+            auth_object=auth_object,
+            package_params=self.params
         )
 
-        response = self.params['http_client'].make_request(
-            method="get",
-            endpoint=endpoint
-        )
+        return ResponseWrapper(self.params, response_object=response_object)
 
-        return self.params['response_object'].returns(response)
-
-
-    def list_all(self):
+    def list_all(self) -> ResponseWrapper:
         """
         List all concepts in app
 
         Returns:
-            (json or dict)
+            (Object) - ResponseWrapper
         """
-        batch_size         = 100
-        current_page       = 1
-        concepts           = []
-        last_batch         = []
+        BATCH_SIZE = 100
+
+        current_page = 1
+        concepts     = []
+        last_batch   = []
 
         def get_new_batch(page, per_page):
-            get_page = self.list(page=page, per_page=per_page).to_dict()
+            get_page = self.list(page=page, per_page=per_page).response.dict
             concepts = get_page['concepts']
 
             return concepts
         
-        first_batch = get_new_batch(current_page, batch_size)
+        first_batch = get_new_batch(current_page, BATCH_SIZE)
         concepts.extend(first_batch)
         last_batch = first_batch
 
-        while len(last_batch) == batch_size:
-            new_batch = get_new_batch(current_page, batch_size)
+        while len(last_batch) == BATCH_SIZE:
+            new_batch = get_new_batch(current_page, BATCH_SIZE)
             concepts.extend(new_batch)
             current_page +=1
             last_batch = new_batch
 
-        return self.params['response_object'].returns({
+        response_schema = {
             'status': {
-                'code': 10000,
+                'code': ClarifaiStatusCodes.SUCCESS,
                 'description': 'Ok'
             },
-            'concepts': concepts
-        })
+            **({'concepts': concepts} if concepts else {})
+        }
+
+        return ResponseWrapper(self.params, response_dict=response_schema)
