@@ -1,20 +1,20 @@
-def get_dict_by_key_or_return_empty(dictt: dict, key: str):
+def get_dict_by_key_or_return_empty(_dict: dict, key: str) -> dict:
     dict_to_return = {}
     
-    if key in dictt:
+    if key in _dict:
         dict_to_return = {
-            key: dictt[key]
+            key: _dict[key]
         }
     
     return dict_to_return
 
 
-def get_existing_dicts_from_keys(dictt: dict, keys: list):
+def get_existing_dicts_from_keys(_dict: dict, keys: list) -> dict:
     dict_to_return = {}
 
     for key in keys:
-        if key in dictt:
-            dict_to_return[key] = dictt[key]
+        if key in _dict:
+            dict_to_return[key] = dic_dicttt[key]
     
     return dict_to_return
 
@@ -34,7 +34,7 @@ def delete_keys_from_dict(d, to_delete):
     return d
 
 
-def delete_none_values(_dict):
+def delete_none_values(_dict: dict) -> dict:
     """Delete None values recursively from all of the dictionaries"""
     for key, value in list(_dict.items()):
         if isinstance(value, dict):

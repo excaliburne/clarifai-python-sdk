@@ -57,7 +57,6 @@ class ClarifaiApi:
         self.inputs   = Inputs(params)
         self.concepts = Concepts(params)
         self.usage    = Usage(params)
-
         self.transfer = Transfer(
             params, 
             other_modules={'module_models': self.models, 'module_inputs': self.inputs, 'module_concepts': self.concepts}

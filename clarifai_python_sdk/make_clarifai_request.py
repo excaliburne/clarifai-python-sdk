@@ -40,10 +40,14 @@ class MakeClarifaiRequest:
         # can query
         self.status_code = None
         self.description = None
+        self.details     = None
         self.response    = None
         self.data        = None
 
         self.make_request()
+
+    def _filter_status_details_from_response(self) -> None:
+        self.details = self.response.get('status', {}).get('details')
 
     def _filter_data_from_response(self) -> None:
         response_copy = copy.deepcopy(self.response)

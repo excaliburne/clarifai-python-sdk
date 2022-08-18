@@ -23,13 +23,18 @@ class ResponseWrapper:
             setattr(self.response, 'json', self._get_response_as_json(self.response.response))
         
         elif response_dict:
-            _class = namedtuple('Test', field_names=['dict', 'json', 'status_code', 'description'])
+            _class = namedtuple('Test', field_names=['dict', 'json', 'status_code', 'description', 'details'])
             self.response = _class(
                 dict=self._get_response_as_dict(response_dict),
                 json=self._get_response_as_json(response_dict),
                 status_code=self._get_satus_code_from_response(response_dict),
-                description=self._get_status_description_from_response(response_dict)
+                description=self._get_status_description_from_response(response_dict),
+                details=self._get_status_details_from_response(response_dict)
             )
+
+    @staticmethod
+    def _get_status_details_from_response(response: dict) -> str or None:
+        return response.get('status', {}).get('details')
 
     @staticmethod
     def _get_status_description_from_response(response: dict) -> str or None:
@@ -48,6 +53,6 @@ class ResponseWrapper:
         pretty_print         = self.params.get('response_config', {}).get('pretty_print_if_json') or True
         
         if pretty_print is not None and pretty_print == True:
-            additional_json_args = { 'indent': 2 }
+            additional_json_args = {'indent': 2}
 
         return json.dumps(response, **additional_json_args)

@@ -6,6 +6,8 @@ from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
 from clarifai_python_sdk.response              import ResponseWrapper
 from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
 
+# PACKAGES
+
 # UTILS
 from clarifai_python_sdk.utils.filters     import Filters
 from clarifai_python_sdk.utils.data        import Data
@@ -230,15 +232,16 @@ class Inputs:
     def list(
         self,
         page: int = 1,
-        per_page: int = 128,
+        per_page: int = 100,
         auth_object: dict = {}
     ):
-        """List Inputs.
+        """
+        List Inputs
 
         Args:
             page (int, optional): Defaults to 1.
-            per_page (int, optional): Defaults to 128.
-            user_app_id (dict, optional):  Defaults to {}.
+            per_page (int, optional): Defaults to 100.
+            auth_object (dict, optional):  Defaults to {}.
 
         Returns:
             _type_: _description_
@@ -359,11 +362,11 @@ class Inputs:
 
         return ResponseWrapper(self.params, response_object=response_object)
 
-    def delete_all(self) -> dict:
+    def delete_all(self) -> ResponseWrapper:
         """Deletes all app inputs by streaming
 
         Returns:
-            (dict): { 'number_of_deleted_inputs' }
+            (Object) - ResponseWrapper
         """
         per_page                  = 100
         last_batch_count_sould_be = per_page

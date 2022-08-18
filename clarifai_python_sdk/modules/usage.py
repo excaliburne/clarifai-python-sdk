@@ -1,4 +1,5 @@
-# SYSTEM IMPORTS
+# SYSTEM
+import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -6,25 +7,26 @@ from dateutil.relativedelta import relativedelta
 from clarifai_python_sdk.response import ResponseWrapper
 from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
 
-# UTILS
-from clarifai_python_sdk.utils.url_handler import UrlHandler
-
 # PACKAGES
 from collections import OrderedDict
 
 # OTHERS
 from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
 
+# DEV IMPORTS
+if os.environ.get('CLARIFAI_PYTHON_SDK__DEV'):
+    import pysnooper
+
 
 DEFAULT_TEMPLATE = 'last_month'
 
-class Usage:
-    def __init__(self, params):
-        self.params = params
 
-    
+class Usage:
+    def __init__(self, params: dict):
+        self.params = params
+  
     @staticmethod
-    def _get_templates(template: str):
+    def _get_templates(template: str) -> dict:
         template = template or DEFAULT_TEMPLATE
 
         now             = datetime.today()
@@ -61,14 +63,14 @@ class Usage:
 
         return templates[template]
 
-
     def _request_historical_usage(
         self,
         start_date: str = None,
         end_date: str = None,
         template: str = DEFAULT_TEMPLATE,
         broken_down_per_app: bool = None,
-        auth_object: dict = {}
+        auth_object: dict = {},
+        **kwargs
     ) -> ResponseWrapper:
         """
         Notes:
@@ -102,7 +104,6 @@ class Usage:
 
         return ResponseWrapper(self.params, response_object=response_object)
 
-
     def historical(
         self,
         start_date: str = None,
@@ -126,7 +127,7 @@ class Usage:
             broken_down_per_app (bool, optional)
 
         Returns:
-            (Object): ResponseWrapper
+            (Object) - ResponseWrapper
         """
         args = locals()
         args.pop('self')
@@ -156,27 +157,28 @@ class Usage:
                 - last_6_months
 
         Returns:
-           (Object): ResponseWrapper
+           (Object) - ResponseWrapper
         """
-        args = locals() 
-        args.pop('self')
-
-        response = self._request_historical_usage(**args, broken_down_per_app=True).response.dict
+        kwargs = locals() 
+        kwargs.pop('self')
 
         OPS_CATEGORY_RELATED_TO_MODELS = ('model-predict')
+
         clarifai_error_description = None
         clarifai_status_code       = None
         is_success = False
         per_apps   = {}
-       
-        if response['status']['code'] != ClarifaiStatusCodes.SUCCESS:
+
+        response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+
+        if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
             is_success = False
-            clarifai_status_code = response['status']['code']
-            clarifai_error_description = response['status'].get('details') or response['status']['description']
+            clarifai_status_code = response_object.status_code
+            clarifai_error_description = response_object.details or response_object.description
 
         else:
             is_success = True
-            usages = response['usage']
+            usages = response_object.dict['usage']
 
             for usage in usages:
                 app_id      = usage['app_id']
@@ -246,26 +248,27 @@ class Usage:
                 - last_6_months
 
         Returns:
-            (Object): ResponseWrapper
+            (Object) - ResponseWrapper
         """
 
         args = locals()
-        del args['self']
-        response = self._request_historical_usage(**args, broken_down_per_app=True).response.dict
+        args.pop('self')
+
+        response_object = self._request_historical_usage(**args, broken_down_per_app=True).response
 
         clarifai_error_description = None
         clarifai_status_code       = None
         is_success = False
         total_ops  = 0
        
-        if response['status']['code'] != ClarifaiStatusCodes.SUCCESS:
+        if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
             is_success = False
-            clarifai_status_code = response['status']['code']
-            clarifai_error_description = response['status'].get('details') or response['status']['description']
+            clarifai_status_code = response_object.status_code
+            clarifai_error_description = response_object.details or response_object.description
 
         else:
             is_success = True,
-            usages = response['usage']
+            usages = response_object.dict['usage']
 
             for usage in usages:
                 value = usage.get('value') or 0
