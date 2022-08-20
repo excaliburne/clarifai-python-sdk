@@ -31,7 +31,7 @@ class ResponseWrapper:
                 description=self._get_status_description_from_response(response_dict),
                 details=self._get_status_details_from_response(response_dict)
             )
-
+            
     @staticmethod
     def _get_status_details_from_response(response: dict) -> str or None:
         return response.get('status', {}).get('details')

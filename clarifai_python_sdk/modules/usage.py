@@ -1,4 +1,5 @@
 # SYSTEM
+from operator import is_
 import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -13,12 +14,16 @@ from collections import OrderedDict
 # OTHERS
 from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
 
+# TYPES
+from typing import List
+
 # DEV IMPORTS
 if os.environ.get('CLARIFAI_PYTHON_SDK__DEV'):
     import pysnooper
 
 
 DEFAULT_TEMPLATE = 'last_month'
+OPS_CATEGORY_RELATED_TO_MODELS = ('model-predict')
 
 
 class Usage:
@@ -87,7 +92,7 @@ class Usage:
         Returns:
             (Object) - ResponseWrapper
         """
-        template = self._get_templates(template)
+        template: dict = self._get_templates(template)
 
         response_object = MakeClarifaiRequest(
             endpoint_index_name="usage__historical",
@@ -110,9 +115,106 @@ class Usage:
         end_date: str = None,
         template: str = DEFAULT_TEMPLATE,
         broken_down_per_app: bool = None
+    ):
+        """
+        Get historical usage (organized data) for specified timeframe.
+            - If no start, end_date or template is given, last month usage will be returned.
+
+        Args:
+            start_date (str, optional)
+            end_date (str, optional)
+            template (str, optional): Options are...
+                - last_day
+                - last_week
+                - last_month
+                - last_3_months
+                - last_6_months
+            broken_down_per_app (bool, optional)
+
+        Returns:
+            (Object) - ResponseWrapper
+
+            'status': {
+                'code': ...
+                ...
+            }
+            'usage': {
+                'by_ops_category': {
+                    'stored-input': 18974,
+                    'search': 1443,
+                    'model-predict': 7118,
+                    'model-training-hours': 17
+                    ...
+                },
+                'by_models': {
+                    'face-clustering': 94,
+                    'face-landmarks': 92,
+                    ...
+                } # if any models used
+            },
+            'timeframe': {
+                'start_date': '2022-02-20T18:17:01.664646Z',
+                'end_date': '2022-08-20T18:17:01.664646Z'
+            }
+        """
+        kwargs: dict = locals()
+        kwargs.pop('self')
+        
+        is_success = False
+        clarifai_status_code = None
+        clarifai_error_description = None
+        usage_data_dict = {
+            'by_ops_category': {}
+        }
+
+        response_object = self._request_historical_usage(**kwargs).response
+
+        if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
+            is_success = False
+            clarifai_status_code = response_object.status_code
+            clarifai_error_description = response_object.details or response_object.description
+        
+        else:
+            is_success = True
+            usages: List[dict] = response_object.dict.get('usage')
+            
+            for usage in usages:
+                category_id: str = usage['category_id']
+                value: int       = usage.get('value') or 0
+
+                usage_data_dict['by_ops_category'][category_id] = value if not usage_data_dict['by_ops_category'].get(category_id) \
+                    else usage_data_dict['by_ops_category'][category_id] + value
+                
+                if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
+                    if not usage_data_dict.get('by_models'): usage_data_dict['by_models'] = {}
+                    model_id: str = usage.get('model_id')
+                    usage_data_dict['by_models'][model_id] = value if not usage_data_dict['by_models'].get(model_id) \
+                        else usage_data_dict['by_models'][model_id] + value
+
+        response_schema = {
+            'status': {
+                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
+                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
+            },
+            **({'usage': usage_data_dict} if is_success else {}),
+            **({'timeframe': self._get_templates(template) \
+                if start_date is None and end_date is None \
+                    else {'start_date': start_date, 'end_date': end_date}} \
+                        if is_success else {}
+            )
+        }
+
+        return ResponseWrapper(self.params, response_dict=response_schema)
+    
+    def historical_feed(
+        self,
+        start_date: str = None,
+        end_date: str = None,
+        template: str = DEFAULT_TEMPLATE,
+        broken_down_per_app: bool = None
     ) -> ResponseWrapper:  
         """
-        Get historical usage for specified timeframe.
+        Get historical feed (unorganized data) usage for specified timeframe.
             - If no start, end_date or template is given, last month usage will be returned.
 
         Args:
@@ -129,10 +231,10 @@ class Usage:
         Returns:
             (Object) - ResponseWrapper
         """
-        args = locals()
-        args.pop('self')
+        kwargs: dict = locals()
+        kwargs.pop('self')
         
-        response_object = self._request_historical_usage(**args)
+        response_object = self._request_historical_usage(**kwargs)
 
         return response_object
 
@@ -162,14 +264,12 @@ class Usage:
         kwargs = locals() 
         kwargs.pop('self')
 
-        OPS_CATEGORY_RELATED_TO_MODELS = ('model-predict')
-
         clarifai_error_description = None
         clarifai_status_code       = None
         is_success = False
         per_apps   = {}
 
-        response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+        response_object: ResponseWrapper = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
 
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
             is_success = False
@@ -178,12 +278,12 @@ class Usage:
 
         else:
             is_success = True
-            usages = response_object.dict['usage']
+            usages: List[dict] = response_object.dict['usage']
 
             for usage in usages:
-                app_id      = usage['app_id']
-                category_id = usage['category_id']
-                value       = usage.get('value') or 0
+                app_id: str      = usage['app_id']
+                category_id: str = usage['category_id']
+                value            = usage.get('value') or 0
 
                 if per_apps.get(app_id) is None:
                     per_apps[app_id] = {
@@ -191,7 +291,7 @@ class Usage:
                         'total_ops': 0
                     }
                 else:
-                    app_dict = per_apps[app_id]
+                    app_dict: dict = per_apps[app_id]
 
                     app_dict['by_ops_category'][category_id] = value \
                         if app_dict['by_ops_category'].get(category_id) is None \
@@ -251,10 +351,10 @@ class Usage:
             (Object) - ResponseWrapper
         """
 
-        args = locals()
-        args.pop('self')
+        kwargs = locals()
+        kwargs.pop('self')
 
-        response_object = self._request_historical_usage(**args, broken_down_per_app=True).response
+        response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
 
         clarifai_error_description = None
         clarifai_status_code       = None
@@ -281,9 +381,9 @@ class Usage:
             },
             **({'total_ops': total_ops} if is_success else {}),
             **({'timeframe': self._get_templates(template) \
-                if start_date is None and end_date is None \
-                    else {'start_date': start_date, 'end_date': end_date}} \
-                        if is_success else {}
+                    if None in (start_date, end_date) \
+                    else {'start_date': start_date, 'end_date': end_date}
+                } if is_success else {}
             )
         }
 
