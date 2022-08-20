@@ -1,5 +1,4 @@
 # SYSTEM
-from operator import is_
 import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -15,7 +14,9 @@ from collections import OrderedDict
 from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
 
 # TYPES
-from typing import List
+from typing import List, Union
+
+from tests import data
 
 # DEV IMPORTS
 if os.environ.get('CLARIFAI_PYTHON_SDK__DEV'):
@@ -114,7 +115,6 @@ class Usage:
         start_date: str = None,
         end_date: str = None,
         template: str = DEFAULT_TEMPLATE,
-        broken_down_per_app: bool = None
     ):
         """
         Get historical usage (organized data) for specified timeframe.
@@ -129,7 +129,6 @@ class Usage:
                 - last_month
                 - last_3_months
                 - last_6_months
-            broken_down_per_app (bool, optional)
 
         Returns:
             (Object) - ResponseWrapper
@@ -164,15 +163,16 @@ class Usage:
         clarifai_status_code = None
         clarifai_error_description = None
         usage_data_dict = {
-            'by_ops_category': {}
+            'by_ops_category': {},
+            'total_ops': 0
         }
 
         response_object = self._request_historical_usage(**kwargs).response
 
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
             is_success = False
-            clarifai_status_code = response_object.status_code
-            clarifai_error_description = response_object.details or response_object.description
+            clarifai_status_code: int = response_object.status_code
+            clarifai_error_description: str = response_object.details or response_object.description
         
         else:
             is_success = True
@@ -190,6 +190,12 @@ class Usage:
                     model_id: str = usage.get('model_id')
                     usage_data_dict['by_models'][model_id] = value if not usage_data_dict['by_models'].get(model_id) \
                         else usage_data_dict['by_models'][model_id] + value
+                
+                usage_data_dict['total_ops'] += value
+
+            ordered_usage_date_dict = OrderedDict(usage_data_dict)
+            ordered_usage_date_dict.move_to_end('total_ops')
+            usage_data_dict = ordered_usage_date_dict
 
         response_schema = {
             'status': {
@@ -322,6 +328,227 @@ class Usage:
                 if start_date is None and end_date is None \
                     else {'start_date': start_date, 'end_date': end_date}} \
                         if is_success else {}
+            )
+        }
+
+        return ResponseWrapper(self.params, response_dict=response_schema)
+
+    def historical_by_date(
+        self,
+        start_date: str = None,
+        end_date: str = None,
+        template: str = None
+    ) -> ResponseWrapper:
+        """
+        Get historical usage broken down by date.
+            - If no start, end_date or template is given, last month usage will be returned.
+
+        Args:
+            start_date (str, optional)
+            end_date (str, optional)
+            template (str, optional): Options are...
+                - last_day
+                - last_week
+                - last_month
+                - last_3_months
+                - last_6_months
+
+        Returns:
+           (Object) - ResponseWrapper
+
+            {
+                'status': {
+                    'code': ...
+                    ...
+            },
+            "usage_by_date": {
+                '2022-07-20T00:00:00Z': {
+                    'by_ops_category': {
+                        'model-predict': 4
+                        ...
+                    },
+                    'by_models': {
+                        'general-image-embedding': 4
+                        ...
+                    },
+                'total_ops': 4
+            },
+        """
+        
+        kwargs: dict = locals()
+        kwargs.pop('self')
+        
+        is_success = False
+        clarifai_status_code = None
+        clarifai_error_description = None
+        usage_data_dict = {}
+
+        response_object = self._request_historical_usage(**kwargs).response
+
+        if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
+            is_success = False
+            clarifai_status_code: int = response_object.status_code
+            clarifai_error_description: str = response_object.details or response_object.description
+        
+        else:
+            is_success = True
+            usages: List[dict] = response_object.dict.get('usage')
+
+            for usage in usages:
+                date: str        = usage['date']
+                category_id: str = usage['category_id']
+                model_id: Union[str, None] = usage.get('model_id')
+                value            = usage.get('value') or 0
+
+                if not usage_data_dict.get(date):
+                    usage_data_dict[date] = {
+                        'by_ops_category': {category_id: value},
+                        **({'by_models': {model_id: value}} if category_id in OPS_CATEGORY_RELATED_TO_MODELS else {}),
+                        'total_ops': 0
+                    }
+                else:
+                    date_dict = usage_data_dict[date]
+
+                    date_dict['by_ops_category'][category_id] = value if not date_dict['by_ops_category'].get(category_id) \
+                        else date_dict['by_ops_category'].get(category_id) + value
+
+                    if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
+                        usage_dict_has_model_key: Union[dict, None] = date_dict.get('by_models')
+
+                        if not usage_dict_has_model_key: 
+                            date_dict['by_models'] = {}
+
+                        date_dict['by_models'][model_id] = value if not date_dict.get('by_models', {}).get(model_id) else date_dict.get('by_models', {}).get(model_id) + value
+                
+                usage_data_dict[date]['total_ops'] += value
+                # ensure "total_ops" is always the last key of each date_dict
+                ordered_usage_data_dict = OrderedDict(usage_data_dict[date])
+                ordered_usage_data_dict.move_to_end('total_ops')
+                usage_data_dict[date] = ordered_usage_data_dict
+
+        response_schema = {
+            'status': {
+                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
+                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
+            },
+            **({'usage_by_date': usage_data_dict} if is_success else {}),
+            **({'timeframe': self._get_templates(template) \
+                if start_date is None and end_date is None \
+                    else {'start_date': start_date, 'end_date': end_date}} \
+                        if is_success else {}
+            )
+        }
+
+        return ResponseWrapper(self.params, response_dict=response_schema)
+
+    def historical_by_date_and_apps(
+        self,
+        start_date: str = None,
+        end_date: str = None,
+        template: str = None
+    ) -> ResponseWrapper:
+        """
+        Get historical usage broken down by date and app.
+            - If no start, end_date or template is given, last month usage will be returned.
+
+        Args:
+            start_date (str, optional)
+            end_date (str, optional)
+            template (str, optional): Options are...
+                - last_day
+                - last_week
+                - last_month
+                - last_3_months
+                - last_6_months
+
+        Returns:
+           (Object) - ResponseWrapper
+
+            {
+                'status': {
+                    'code': ...
+                    ...
+            },
+            "usage_by_date_and_apps": {
+                "2022-07-21T00:00:00Z": {
+                    "FRAlphaFoundDogsV2": {
+                        "by_ops_category": {
+                            "model-predict": 66
+                            ...
+                        },
+                        "by_models": {
+                            "general-image-recognition": 22,
+                            "general-image-embedding": 22,
+                            "general-clusterering": 22
+                            ...
+                        }
+                    },
+                    "clarifai-toolbox-five": {
+                        "by_ops_category": {
+                            "search": 72
+                            ...
+                        }
+                    }
+                    ...
+                },
+            },
+        """
+        
+        kwargs: dict = locals()
+        kwargs.pop('self')
+        
+        is_success = False
+        clarifai_status_code = None
+        clarifai_error_description = None
+        usage_data_dict = {}
+
+        response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+
+        if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
+            is_success = False
+            clarifai_status_code: int = response_object.status_code
+            clarifai_error_description: str = response_object.details or response_object.description
+        
+        else:
+            is_success = True
+            usages: List[dict] = response_object.dict.get('usage')
+
+            for usage in usages:
+                date: str        = usage['date']
+                category_id: str = usage['category_id']
+                model_id: Union[str, None] = usage.get('model_id')
+                app_id: str      = usage.get('app_id')
+                value: int       = usage.get('value') or 0
+
+                if not usage_data_dict.get(date):
+                    usage_data_dict[date] = {}
+                
+                if not usage_data_dict.get(date, {}).get(app_id):
+                    usage_data_dict[date][app_id] = {}
+                
+                if not usage_data_dict[date][app_id].get('by_ops_category'):
+                    usage_data_dict[date][app_id]['by_ops_category'] = {}
+                    
+                if not usage_data_dict[date][app_id].get('by_models') and category_id in OPS_CATEGORY_RELATED_TO_MODELS:
+                    usage_data_dict[date][app_id]['by_models'] = {}
+        
+                by_ops_dict = usage_data_dict[date][app_id]['by_ops_category']
+                by_ops_dict[category_id] = value if not by_ops_dict.get(category_id) else by_ops_dict.get(category_id) + value
+
+                if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
+                    by_models_dict = usage_data_dict[date][app_id]['by_models']
+                    by_models_dict[model_id] = value if not by_models_dict.get(model_id) else by_models_dict.get(model_id) + value
+
+        response_schema = {
+            'status': {
+                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
+                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
+            },
+            **({'usage_by_date_and_apps': usage_data_dict} if is_success else {}),
+            **({'timeframe': self._get_templates(template) \
+                    if None in (start_date, end_date) \
+                    else {'start_date': start_date, 'end_date': end_date}
+                } if is_success else {}
             )
         }
 
