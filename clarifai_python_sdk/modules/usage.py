@@ -142,7 +142,7 @@ class Usage:
         start_date: str = None,
         end_date: str = None,
         template: str = DEFAULT_TEMPLATE,
-    ):
+    ) -> ResponseWrapper:
         """
         Get historical usage (organized data) for specified timeframe.
             - If no start, end_date or template is given, last month usage will be returned.
@@ -184,6 +184,8 @@ class Usage:
             }
         """
         kwargs: dict = locals()
+        print(kwargs)
+        return
         kwargs.pop('self')
         
         usage_data_dict = {
