@@ -184,8 +184,6 @@ class Usage:
             }
         """
         kwargs: dict = locals()
-        print(kwargs)
-        return
         kwargs.pop('self')
         
         usage_data_dict = {
