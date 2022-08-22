@@ -44,11 +44,10 @@ class ClarifaiApi:
             # **kwargs
         }
 
-        if self._user_id and self._app_id:
-            params['user_app_id'] = {
-                'user_id': self._user_id,
-                'app_id': self._app_id
-            }
+        params['user_app_id'] = {
+            **({'user_id': self._user_id} if self._user_id else {}),
+            **({'app_id': self._app_id} if self._app_id else {})
+        }
         
         self.params = params
  

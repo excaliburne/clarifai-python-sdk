@@ -16,8 +16,6 @@ from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
 # TYPES
 from typing import List, Union
 
-from tests import data
-
 # DEV IMPORTS
 if os.environ.get('CLARIFAI_PYTHON_SDK__DEV'):
     import pysnooper

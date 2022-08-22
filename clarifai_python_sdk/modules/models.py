@@ -1,5 +1,6 @@
 # SYSTEM
 from operator import itemgetter
+from ..clarifai_status_codes import ClarifaiStatusCodes
 
 # PACKAGE
 from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
@@ -225,4 +226,68 @@ class Models:
             package_params=self.params
         )
 
-        return ResponseWrapper(self.params, response_object=response_object)    
+        return ResponseWrapper(self.params, response_object=response_object)   
+
+    def get_model_trained_concepts(
+        self, 
+        model_id: str, 
+        model_version_id: str = None, 
+        auth_object: dict = {}
+        ) -> ResponseWrapper:
+        """
+        Retrieve model's trained concepts
+
+        Args:
+            model_id (str)
+            model_version_id (str, optional)
+            auth_object (dict, optional): Defaults to {}.
+
+        Returns:
+            (Object) - Response Wrapper
+
+            {
+                "status": {
+                    "code": ...,
+                    "description": ...,
+                    "req_id": "c3a432aabe3c5..."
+                },
+                'concepts': [
+                    {
+                        'id': 'ai_jH6mzv12',
+                        'name': 'Adriatic',
+                        'value': 1,
+                        'created_at': '2016-03-17T11:43:01.223962Z',
+                        'language': 'en',
+                        'app_id': '...'
+                        ...
+                    },
+                    ...
+                ]
+            }
+        """
+
+        concepts = []
+        endpoint_index_name = 'models__output_info' + '' if not model_version_id else '__with_version_id'
+
+        response_object = MakeClarifaiRequest(
+            endpoint_index_name=endpoint_index_name,
+            method="GET",
+            path_variables={
+                **(auth_object.get('user_app_id', {}) or self.params['user_app_id']),
+                'model_id': model_id,
+                **({'version_id': model_version_id} if model_version_id else {})
+            },
+            auth_object=auth_object,
+            package_params=self.params
+        )
+
+        if response_object.status_code == ClarifaiStatusCodes.SUCCESS:
+            concepts = response_object.response['model']['output_info']['data']['concepts']
+
+        response_schema = {
+            'status': {**response_object.response['status']},
+            'concepts': concepts
+        }
+
+        return ResponseWrapper(self.params, response_dict=response_schema)   
+

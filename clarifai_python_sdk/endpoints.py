@@ -13,6 +13,8 @@ ENDPOINTS = {
     'models__get_model_versions_by_model_id': '/v2/users/me/apps/{app_id}/models/{model_id}/versions',
     'models__get_model_training_inputs':      '/v2/users/me/apps/{app_id}/models/{model_id}/inputs',
     'models__search':                         '/v2/models/searches',
+    'models__output_info':                    '/v2/users/{user_id}/apps/{app_id}/models/{model_id}/output_info',
+    'models__output_info__with_version_id':   '/v2/users/{user_id}/apps/{app_id}/models/{model_id}/versions/{version_id}/output_info',
 
     'inputs__post':                           '/v2/inputs',
     'inputs__list':                           '/v2/users/{user_id}/apps/{app_id}/inputs',
@@ -21,6 +23,5 @@ ENDPOINTS = {
 
     'concepts__list':                         '/v2/users/me/apps/{app_id}/concepts',
 
-    'usage__historical':                      '/v2/users/{user_id}/historical_usage'
-    
+    'usage__historical':                      '/v2/users/{user_id}/historical_usage'   
 }
