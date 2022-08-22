@@ -4,6 +4,37 @@ from collections import namedtuple
 
 # PACKAGE
 from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
+from clarifai_python_sdk.clarifai_status_codes import ClarifaiStatusCodes
+
+
+class BuildResponseSchema:
+    def __init__(
+        self, 
+        is_success: int = False,
+        entries_if_success: dict = None,
+        clarifai_status_code: int = None,
+        clarifai_error_description: str = None
+        ):
+
+        self.is_success = is_success
+        self.entries_if_success         = entries_if_success
+        self.clarifai_status_code       = clarifai_status_code
+        self.clarifai_error_description = clarifai_error_description
+
+    def update(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def build(self) -> dict:
+        response_schema = {
+            'status': {
+                'code': self.clarifai_status_code if self.clarifai_status_code else ClarifaiStatusCodes.SUCCESS,
+                **({'description': self.clarifai_error_description} if self.clarifai_error_description else {})
+            },
+            **(self.entries_if_success if self.is_success else {})
+        }
+
+        return response_schema
 
 
 class ResponseWrapper:

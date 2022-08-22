@@ -1,10 +1,11 @@
 # SYSTEM
 import os
 from datetime import datetime
+from urllib import response
 from dateutil.relativedelta import relativedelta
 
 # PACKAGE
-from clarifai_python_sdk.response import ResponseWrapper
+from clarifai_python_sdk.response import ResponseWrapper, BuildResponseSchema
 from clarifai_python_sdk.make_clarifai_request import MakeClarifaiRequest
 
 # PACKAGES
@@ -22,7 +23,35 @@ if os.environ.get('CLARIFAI_PYTHON_SDK__DEV'):
 
 
 DEFAULT_TEMPLATE = 'last_month'
-OPS_CATEGORY_RELATED_TO_MODELS = ('model-predict')
+OPS_CATEGORIES_RELATED_TO_MODELS = ('model-predict')
+
+
+def _ensure_key_is_last(origin_dict: dict, key_to_last: str) -> dict:
+    ordered_usage_date_dict = OrderedDict(origin_dict)
+    ordered_usage_date_dict.move_to_end(key_to_last)
+    
+    return ordered_usage_date_dict
+
+
+class UsageObject:
+    """
+    A reminder of what a Clarifai usage object looks like...
+    {
+      'date": '2022-07-22T00:00:00Z",
+      'section': 'model_usage',
+      'model_id': 'travel-embedding-v1',
+      'category_id': 'model-predict',
+      'value': 19
+    },
+    """
+    def __init__(self, clarifai_usage_object: dict):
+        self.clarifai_usage_object = clarifai_usage_object
+
+        self.value: int = clarifai_usage_object.get('value', 0)
+        self.category_id: str = clarifai_usage_object['category_id']
+        self.app_id: Union[str, None] = clarifai_usage_object.get('app_id')
+        self.model_id: Union[str, None] = clarifai_usage_object.get('model_id')
+        self.date: str = clarifai_usage_object['date']
 
 
 class Usage:
@@ -157,58 +186,50 @@ class Usage:
         kwargs: dict = locals()
         kwargs.pop('self')
         
-        is_success = False
-        clarifai_status_code = None
-        clarifai_error_description = None
         usage_data_dict = {
             'by_ops_category': {},
             'total_ops': 0
         }
 
         response_object = self._request_historical_usage(**kwargs).response
+        response_schema = BuildResponseSchema()
 
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
-            is_success = False
-            clarifai_status_code: int = response_object.status_code
-            clarifai_error_description: str = response_object.details or response_object.description
-        
+            response_schema.update(
+                clarifai_status_code=response_object.status_code,
+                clarifai_error_description=response_object.details or response_object.description
+            )
         else:
-            is_success = True
+            response_schema.update(is_success=True)
             usages: List[dict] = response_object.dict.get('usage')
             
             for usage in usages:
-                category_id: str = usage['category_id']
-                value: int       = usage.get('value') or 0
+                usage = UsageObject(usage)
 
-                usage_data_dict['by_ops_category'][category_id] = value if not usage_data_dict['by_ops_category'].get(category_id) \
-                    else usage_data_dict['by_ops_category'][category_id] + value
+                usage_data_dict['by_ops_category'][usage.category_id] = usage.value if not \
+                    usage_data_dict['by_ops_category'].get(usage.category_id) \
+                        else usage_data_dict['by_ops_category'][usage.category_id] + usage.value
                 
-                if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
+                if usage.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
                     if not usage_data_dict.get('by_models'): usage_data_dict['by_models'] = {}
-                    model_id: str = usage.get('model_id')
-                    usage_data_dict['by_models'][model_id] = value if not usage_data_dict['by_models'].get(model_id) \
-                        else usage_data_dict['by_models'][model_id] + value
+                    usage_data_dict['by_models'][usage.model_id] = usage.value if not \
+                        usage_data_dict['by_models'].get(usage.model_id) \
+                            else usage_data_dict['by_models'][usage.model_id] + usage.value
                 
-                usage_data_dict['total_ops'] += value
+                usage_data_dict['total_ops'] += usage.value
 
-            ordered_usage_date_dict = OrderedDict(usage_data_dict)
-            ordered_usage_date_dict.move_to_end('total_ops')
-            usage_data_dict = ordered_usage_date_dict
+            usage_data_dict: dict = _ensure_key_is_last(usage_data_dict, 'total_ops')
 
-        response_schema = {
-            'status': {
-                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
-                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
+        response_schema.update(
+            entries_if_success={
+                'usage': usage_data_dict,
+                'timeframe': self._get_templates(template) \
+                    if start_date is None and end_date is None \
+                        else {'start_date': start_date, 'end_date': end_date}
             },
-            **({'usage': usage_data_dict} if is_success else {}),
-            **({'timeframe': self._get_templates(template) \
-                if start_date is None and end_date is None \
-                    else {'start_date': start_date, 'end_date': end_date}} \
-                        if is_success else {}
-            )
-        }
+        )
 
-        return ResponseWrapper(self.params, response_dict=response_schema)
+        return ResponseWrapper(self.params, response_dict=response_schema.build())
     
     def historical_feed(
         self,
@@ -242,7 +263,7 @@ class Usage:
 
         return response_object
 
-    def historical_usage_per_apps(
+    def historical_by_apps(
         self,
         start_date: str = None,
         end_date: str = None,
@@ -268,68 +289,162 @@ class Usage:
         kwargs = locals() 
         kwargs.pop('self')
 
-        clarifai_error_description = None
-        clarifai_status_code       = None
-        is_success = False
-        per_apps   = {}
+        usage_data_dict = {}
 
-        response_object: ResponseWrapper = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+        response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+        response_schema = BuildResponseSchema()
 
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
-            is_success = False
-            clarifai_status_code = response_object.status_code
-            clarifai_error_description = response_object.details or response_object.description
-
+            response_schema.update(
+                clarifai_status_code=response_object.status_code,
+                clarifai_error_description=response_object.details or response_object.description
+            )
         else:
-            is_success = True
+            response_schema.update(is_success=True)
             usages: List[dict] = response_object.dict['usage']
 
             for usage in usages:
-                app_id: str      = usage['app_id']
-                category_id: str = usage['category_id']
-                value            = usage.get('value') or 0
+                usage = UsageObject(usage)
 
-                if per_apps.get(app_id) is None:
-                    per_apps[app_id] = {
+                if usage_data_dict.get(usage.app_id) is None:
+                    usage_data_dict[usage.app_id] = {
                         'by_ops_category': {},
                         'total_ops': 0
                     }
                 else:
-                    app_dict: dict = per_apps[app_id]
+                    app_dict: dict = usage_data_dict[usage.app_id]
 
-                    app_dict['by_ops_category'][category_id] = value \
-                        if app_dict['by_ops_category'].get(category_id) is None \
-                            else app_dict['by_ops_category'][category_id] + value
+                    app_dict['by_ops_category'][usage.category_id] = usage.value \
+                        if app_dict['by_ops_category'].get(usage.category_id) is None \
+                            else app_dict['by_ops_category'][usage.category_id] + usage.value
 
-                    if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
-                        model_id = usage['model_id']
-
+                    if usage.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
                         app_dict['by_models'] = {} if app_dict.get('by_models') is None else app_dict['by_models']
-                        app_dict['by_models'][model_id] = value \
-                            if app_dict['by_models'].get(model_id) is None \
-                                else app_dict['by_models'][model_id] + value
+                        app_dict['by_models'][usage.model_id] = usage.value \
+                            if app_dict['by_models'].get(usage.model_id) is None \
+                                else app_dict['by_models'][usage.model_id] + usage.value
                     
-                    app_dict['total_ops'] = app_dict['total_ops'] + value
+                    app_dict['total_ops'] = app_dict['total_ops'] + usage.value
 
-                    # Putting "total_ops" keys at the end of each app_id dict
-                    ordered_app_dict = OrderedDict(app_dict)
-                    ordered_app_dict.move_to_end('total_ops')
-                    per_apps[app_id] = ordered_app_dict
+                    usage_data_dict[usage.app_id]: dict = _ensure_key_is_last(app_dict, 'total_ops')
 
-        response_schema = {
-            'status': {
-                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
-                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
-            },
-            **({'usage_per_apps': per_apps} if is_success else {}),
-            **({'timeframe': self._get_templates(template) \
-                if start_date is None and end_date is None \
-                    else {'start_date': start_date, 'end_date': end_date}} \
-                        if is_success else {}
+        response_schema.update(
+            entries_if_success={
+                'usage_by_apps': usage_data_dict,
+                'timeframe': self._get_templates(template) \
+                    if start_date is None and end_date is None \
+                        else {'start_date': start_date, 'end_date': end_date}
+            }
+        )
+
+        return ResponseWrapper(self.params, response_dict=response_schema.build())
+    
+    def historical_by_apps_and_dates(
+        self,
+        start_date: str = None,
+        end_date: str = None,
+        template: str = None
+    ) -> ResponseWrapper:
+        """
+        Get historical usage broken down apps then date.
+            - If no start, end_date or template is given, last month usage will be returned.
+
+        Args:
+            start_date (str, optional)
+            end_date (str, optional)
+            template (str, optional): Options are...
+                - last_day
+                - last_week
+                - last_month
+                - last_3_months
+                - last_6_months
+
+        Returns:
+           (Object) - ResponseWrapper
+
+            {
+                'status': {
+                    'code': ...,
+                    ...
+                },
+                'usage_by_apps_and_dates': {
+                    "clarifai-toolbox-four": {
+                        "2022-07-22T00:00:00Z": {
+                            "by_ops_category": {
+                                "model-predict": 114,
+                                ...
+                            },
+                            "by_models": {
+                                "travel-embedding-v1": 38,
+                                "travel-clustering-v1": 38,
+                                "travel-recognition-v1": 38,
+                                ...
+                            },
+                            "total_ops": 114
+                        },
+                        ...
+                    },
+                    ...
+                }
+        """
+
+        kwargs = locals() 
+        kwargs.pop('self')
+
+        usage_data_dict = {}
+
+        response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+        response_schema = BuildResponseSchema()
+
+        if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
+            response_schema.update(
+                clarifai_status_code=response_object.status_code,
+                clarifai_error_description=response_object.details or response_object.description
             )
-        }
+        else:
+            response_schema.update(is_success=True)
+            usages: List[dict] = response_object.dict.get('usage')
 
-        return ResponseWrapper(self.params, response_dict=response_schema)
+            for usage in usages:
+                usage = UsageObject(usage)
+
+                if not usage_data_dict.get(usage.app_id):
+                    usage_data_dict[usage.app_id] = {}
+                
+                if not usage_data_dict[usage.app_id].get(usage.date):
+                    usage_data_dict[usage.app_id][usage.date] = {}
+                
+                if not usage_data_dict[usage.app_id][usage.date].get('by_ops_category'):
+                    usage_data_dict[usage.app_id][usage.date]['by_ops_category'] = {}
+
+                by_models_dict_exists: Union[dict, None] = usage_data_dict[usage.app_id][usage.date].get('by_models')
+                
+                if not by_models_dict_exists and usage.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
+                    usage_data_dict[usage.app_id][usage.date]['by_models'] = {}
+                
+                if usage.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
+                    by_models_dict = usage_data_dict[usage.app_id][usage.date]['by_models']
+                    by_models_dict[usage.model_id] = usage.value if not by_models_dict.get(usage.model_id) else \
+                        by_models_dict[usage.model_id] + usage.value
+                
+                by_ops_dict = usage_data_dict[usage.app_id][usage.date]['by_ops_category']
+                by_ops_dict[usage.category_id] = usage.value if not by_ops_dict.get(usage.category_id) else \
+                    by_ops_dict[usage.category_id] + usage.value
+                
+                usage_data_dict[usage.app_id][usage.date]['total_ops'] = usage.value if not \
+                    usage_data_dict[usage.app_id][usage.date].get('total_ops') else \
+                        usage_data_dict[usage.app_id][usage.date]['total_ops'] + usage.value
+            
+        response_schema.update(
+            entries_if_success={
+                'usage_by_apps_and_dates': usage_data_dict,
+                'timeframe': self._get_templates(template) \
+                    if start_date is None and end_date is None \
+                        else {'start_date': start_date, 'end_date': end_date}
+            },
+        )
+
+        return ResponseWrapper(self.params, response_dict=response_schema.build())
 
     def historical_by_date(
         self,
@@ -376,68 +491,60 @@ class Usage:
         kwargs: dict = locals()
         kwargs.pop('self')
         
-        is_success = False
-        clarifai_status_code = None
-        clarifai_error_description = None
         usage_data_dict = {}
 
         response_object = self._request_historical_usage(**kwargs).response
+        response_schema = BuildResponseSchema()
 
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
-            is_success = False
-            clarifai_status_code: int = response_object.status_code
-            clarifai_error_description: str = response_object.details or response_object.description
-        
+            response_schema.update(
+                clarifai_status_code=response_object.status_code,
+                clarifai_error_description=response_object.details or response_object.description
+            )
         else:
-            is_success = True
+            response_schema.update(is_success=True)
             usages: List[dict] = response_object.dict.get('usage')
 
             for usage in usages:
-                date: str        = usage['date']
-                category_id: str = usage['category_id']
-                model_id: Union[str, None] = usage.get('model_id')
-                value            = usage.get('value') or 0
+                usage = UsageObject(usage)
 
-                if not usage_data_dict.get(date):
-                    usage_data_dict[date] = {
-                        'by_ops_category': {category_id: value},
-                        **({'by_models': {model_id: value}} if category_id in OPS_CATEGORY_RELATED_TO_MODELS else {}),
+                if not usage_data_dict.get(usage.date):
+                    usage_data_dict[usage.date] = {
+                        'by_ops_category': {usage.category_id: usage.value},
+                        **({'by_models': {usage.model_id: usage.value}} if usage.category_id in OPS_CATEGORIES_RELATED_TO_MODELS else {}),
                         'total_ops': 0
                     }
                 else:
-                    date_dict = usage_data_dict[date]
+                    date_dict = usage_data_dict[usage.date]
 
-                    date_dict['by_ops_category'][category_id] = value if not date_dict['by_ops_category'].get(category_id) \
-                        else date_dict['by_ops_category'].get(category_id) + value
+                    date_dict['by_ops_category'][usage.category_id] = usage.value if not \
+                        date_dict['by_ops_category'].get(usage.category_id) \
+                            else date_dict['by_ops_category'][usage.category_id] + usage.value
 
-                    if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
+                    if usage.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
                         usage_dict_has_model_key: Union[dict, None] = date_dict.get('by_models')
 
                         if not usage_dict_has_model_key: 
                             date_dict['by_models'] = {}
 
-                        date_dict['by_models'][model_id] = value if not date_dict.get('by_models', {}).get(model_id) else date_dict.get('by_models', {}).get(model_id) + value
+                        date_dict['by_models'][usage.model_id] = usage.value if not \
+                            date_dict.get('by_models', {}).get(usage.model_id) else \
+                                date_dict.get('by_models', {})[usage.model_id] + usage.value
                 
-                usage_data_dict[date]['total_ops'] += value
-                # ensure "total_ops" is always the last key of each date_dict
-                ordered_usage_data_dict = OrderedDict(usage_data_dict[date])
-                ordered_usage_data_dict.move_to_end('total_ops')
-                usage_data_dict[date] = ordered_usage_data_dict
+                usage_data_dict[usage.date]['total_ops'] += usage.value
 
-        response_schema = {
-            'status': {
-                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
-                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
-            },
-            **({'usage_by_date': usage_data_dict} if is_success else {}),
-            **({'timeframe': self._get_templates(template) \
-                if start_date is None and end_date is None \
-                    else {'start_date': start_date, 'end_date': end_date}} \
-                        if is_success else {}
-            )
-        }
+                usage_data_dict[usage.date] = _ensure_key_is_last(usage_data_dict[usage.date], 'total_ops')
 
-        return ResponseWrapper(self.params, response_dict=response_schema)
+        response_schema.update(
+            entries_if_success={
+                'usage_by_date': usage_data_dict,
+                'timeframe': self._get_templates(template) \
+                    if start_date is None and end_date is None \
+                        else {'start_date': start_date, 'end_date': end_date}
+            }
+        )
+
+        return ResponseWrapper(self.params, response_dict=response_schema.build())
 
     def historical_by_date_and_apps(
         self,
@@ -446,7 +553,7 @@ class Usage:
         template: str = None
     ) -> ResponseWrapper:
         """
-        Get historical usage broken down by date and app.
+        Get historical usage broken down by date then app.
             - If no start, end_date or template is given, last month usage will be returned.
 
         Args:
@@ -495,62 +602,56 @@ class Usage:
         kwargs: dict = locals()
         kwargs.pop('self')
         
-        is_success = False
-        clarifai_status_code = None
-        clarifai_error_description = None
         usage_data_dict = {}
 
         response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+        response_schema = BuildResponseSchema()
 
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
-            is_success = False
-            clarifai_status_code: int = response_object.status_code
-            clarifai_error_description: str = response_object.details or response_object.description
-        
+            response_schema.update(
+                clarifai_status_code=response_object.status_code,
+                clarifai_error_description=response_object.details or response_object.description
+            )
         else:
-            is_success = True
+            response_schema.update(is_success=True)
             usages: List[dict] = response_object.dict.get('usage')
 
             for usage in usages:
-                date: str        = usage['date']
-                category_id: str = usage['category_id']
-                model_id: Union[str, None] = usage.get('model_id')
-                app_id: str      = usage.get('app_id')
-                value: int       = usage.get('value') or 0
+                usage_object = UsageObject(usage)
 
-                if not usage_data_dict.get(date):
-                    usage_data_dict[date] = {}
+                if not usage_data_dict.get(usage_object.date):
+                    usage_data_dict[usage_object.date] = {}
                 
-                if not usage_data_dict.get(date, {}).get(app_id):
-                    usage_data_dict[date][app_id] = {}
+                if not usage_data_dict.get(usage_object.date, {}).get(usage_object.app_id):
+                    usage_data_dict[usage_object.date][usage_object.app_id] = {}
                 
-                if not usage_data_dict[date][app_id].get('by_ops_category'):
-                    usage_data_dict[date][app_id]['by_ops_category'] = {}
+                if not usage_data_dict[usage_object.date][usage_object.app_id].get('by_ops_category'):
+                    usage_data_dict[usage_object.date][usage_object.app_id]['by_ops_category'] = {}
+                
+                by_models_dict_exists: Union[dict, None] = usage_data_dict[usage_object.date][usage_object.app_id].get('by_models')
                     
-                if not usage_data_dict[date][app_id].get('by_models') and category_id in OPS_CATEGORY_RELATED_TO_MODELS:
-                    usage_data_dict[date][app_id]['by_models'] = {}
+                if not by_models_dict_exists and usage_object.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
+                    usage_data_dict[usage_object.date][usage_object.app_id]['by_models'] = {}
         
-                by_ops_dict = usage_data_dict[date][app_id]['by_ops_category']
-                by_ops_dict[category_id] = value if not by_ops_dict.get(category_id) else by_ops_dict.get(category_id) + value
+                by_ops_dict = usage_data_dict[usage_object.date][usage_object.app_id]['by_ops_category']
+                by_ops_dict[usage_object.category_id] = usage_object.value if not by_ops_dict.get(usage_object.category_id) else \
+                    by_ops_dict.get(usage_object.category_id) + usage_object.value
 
-                if category_id in OPS_CATEGORY_RELATED_TO_MODELS:
-                    by_models_dict = usage_data_dict[date][app_id]['by_models']
-                    by_models_dict[model_id] = value if not by_models_dict.get(model_id) else by_models_dict.get(model_id) + value
+                if usage_object.category_id in OPS_CATEGORIES_RELATED_TO_MODELS:
+                    by_models_dict = usage_data_dict[usage_object.date][usage_object.app_id]['by_models']
+                    by_models_dict[usage_object.model_id] = usage_object.value if not by_models_dict.get(usage_object.model_id) else \
+                        by_models_dict.get(usage_object.model_id) + usage_object.value
 
-        response_schema = {
-            'status': {
-                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
-                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
-            },
-            **({'usage_by_date_and_apps': usage_data_dict} if is_success else {}),
-            **({'timeframe': self._get_templates(template) \
+        response_schema.update(
+            entries_if_success={
+                'usage_by_date_and_apps': usage_data_dict,
+                'timeframe': self._get_templates(template) \
                     if None in (start_date, end_date) \
                     else {'start_date': start_date, 'end_date': end_date}
-                } if is_success else {}
-            )
-        }
+            }
+        )
 
-        return ResponseWrapper(self.params, response_dict=response_schema)
+        return ResponseWrapper(self.params, response_dict=response_schema.build())
     
     def total_ops(
         self,
@@ -580,36 +681,28 @@ class Usage:
         kwargs.pop('self')
 
         response_object = self._request_historical_usage(broken_down_per_app=True, **kwargs).response
+        response_schema = BuildResponseSchema()
 
-        clarifai_error_description = None
-        clarifai_status_code       = None
-        is_success = False
-        total_ops  = 0
+        total_ops = 0
        
         if response_object.status_code != ClarifaiStatusCodes.SUCCESS:
-            is_success = False
-            clarifai_status_code = response_object.status_code
-            clarifai_error_description = response_object.details or response_object.description
-
+            response_schema.update(
+                clarifai_status_code=response_object.status_code,
+                clarifai_error_description=response_object.details or response_object.description
+            )
         else:
-            is_success = True,
+            response_schema.update(is_success=True)
             usages = response_object.dict['usage']
 
-            for usage in usages:
-                value = usage.get('value') or 0
-                total_ops += value
-
-        response_schema = {
-            'status': {
-                'code': clarifai_status_code if clarifai_status_code is not None else ClarifaiStatusCodes.SUCCESS,
-                **({'description': clarifai_error_description} if clarifai_error_description is not None else {})
-            },
-            **({'total_ops': total_ops} if is_success else {}),
-            **({'timeframe': self._get_templates(template) \
+            total_ops = sum(map(lambda usage: UsageObject(usage).value, usages))
+        
+        response_schema.update(
+            entries_if_success={
+                'total_ops': total_ops,
+                'timeframe': self._get_templates(template) \
                     if None in (start_date, end_date) \
-                    else {'start_date': start_date, 'end_date': end_date}
-                } if is_success else {}
-            )
-        }
+                        else {'start_date': start_date, 'end_date': end_date}
+            }
+        )
 
-        return ResponseWrapper(self.params, response_dict=response_schema)
+        return ResponseWrapper(self.params, response_dict=response_schema.build())
